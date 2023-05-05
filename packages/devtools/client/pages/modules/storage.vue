@@ -93,6 +93,7 @@ async function saveNewItem() {
 
   router.replace({ query: { storage: currentStorage.value, key } })
   newKey.value = ''
+  refreshStorageKeys()
 }
 
 async function saveCurrentItem() {
@@ -107,6 +108,7 @@ async function removeCurrentItem() {
     return
   await rpc.removeStorageItem(currentItem.value.key)
   currentItem.value = null
+  refreshStorageKeys()
 }
 
 async function renameCurrentItem() {
@@ -215,7 +217,7 @@ async function renameCurrentItem() {
       :key="name"
       min-w-80 cursor-pointer p-4 text-left
       hover="border-green"
-      @click="currentStorage = name"
+      @click="currentStorage = String(name)"
     >
       <span font-bold>{{ name }}</span><br>
       <span text-sm>{{ storage.driver }} driver</span><br>
