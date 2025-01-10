@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { NuxtLayout } from 'nuxt/schema'
 import type { RouteInfo } from '~/../src/types'
+import { computed } from 'vue'
+import { useOpenInEditor } from '~/composables/editor'
+import { useServerApp } from '~/composables/state'
+import { useCopy } from '../composables/editor'
 
 const props = defineProps<{
   pages: RouteInfo[]
@@ -15,6 +19,7 @@ defineEmits<{
 
 const openInEditor = useOpenInEditor()
 const serverApp = useServerApp()
+const copy = useCopy()
 
 const sorted = computed(() => {
   return [...props.pages].sort((a, b) => a.path.localeCompare(b.path))
@@ -34,7 +39,7 @@ function getMiddlewarePath(name: any) {
 </script>
 
 <template>
-  <div>
+  <div max-w-full of-auto>
     <table w-full>
       <thead border="b base">
         <tr>
@@ -57,15 +62,15 @@ function getMiddlewarePath(name: any) {
         <tr v-for="item of sorted" :key="item.name" class="group" h-7 border="b dashed transparent hover:base">
           <td w-20 pr-1>
             <div flex items-center justify-end>
-              <Badge
+              <NBadge
                 v-if="matched.find(m => m.name === item.name)"
-                bg-green-400:10 text-green-400
+                n="green"
                 title="active"
                 v-text="'active'"
               />
-              <Badge
-                v-if="matchedPending.find(m => m.name === item.name)"
-                bg-teal-400:10 text-teal-400
+              <NBadge
+                v-else-if="matchedPending.find(m => m.name === item.name)"
+                n="teal"
                 title="next"
                 v-text="'next'"
               />
@@ -76,9 +81,10 @@ function getMiddlewarePath(name: any) {
               <RoutePathItem
                 :route="item"
                 :class="matched.find(m => m.name === item.name) ? 'text-primary' : matchedPending.find(m => m.name === item.name) ? 'text-teal' : ''"
+                ws-nowrap
                 @navigate="path => $emit('navigate', path)"
               />
-              <div op0 group-hover:op100 flex="~ gap1">
+              <div flex="~ gap1" pr2 op0 group-hover:op100>
                 <button
                   v-if="item.file || item.meta?.file"
                   text-sm op40 hover="op100 text-primary"
@@ -87,19 +93,27 @@ function getMiddlewarePath(name: any) {
                 >
                   <div i-carbon-script-reference />
                 </button>
+                <button
+                  v-if="item.file || item.meta?.file"
+                  text-sm op40 hover="op100 text-primary"
+                  title="Copy path"
+                  @click="copy((item.file || item.meta?.file) as string)"
+                >
+                  <div i-carbon-copy />
+                </button>
               </div>
             </div>
           </td>
-          <td w-0 ws-nowrap pr-1 text-left font-mono text-sm op50>
+          <td w-0 ws-nowrap pr-1 text-left text-sm font-mono op50>
             {{ item.name }}
           </td>
-          <td w-0 ws-nowrap pr-1 text-center font-mono text-sm op50>
+          <td w-0 ws-nowrap pr-1 text-center text-sm font-mono op50>
             <FilepathItem
               :filepath="getMiddlewarePath(item.meta.middleware)"
               :override="`${item.meta.middleware || '-'}`"
             />
           </td>
-          <td w-0 ws-nowrap text-center font-mono text-sm>
+          <td w-0 ws-nowrap text-center text-sm font-mono>
             <span v-if="item.meta.layout === false">-</span>
             <button v-else-if="item.meta.layout" @click="openLayout(item.meta.layout as string)">
               {{ item.meta.layout }}

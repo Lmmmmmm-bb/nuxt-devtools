@@ -1,29 +1,32 @@
-import type { Highlighter, Lang } from 'shiki-es'
-import { getHighlighter } from 'shiki-es'
+import type { BuiltinLanguage, HighlighterCore } from 'shiki'
+import { createHighlighterCore, createJavaScriptRegexEngine } from 'shiki/core'
+import { shallowRef } from 'vue'
 
-export const shiki = ref<Highlighter>()
+export const shiki = shallowRef<HighlighterCore>()
 
 let promise: Promise<any> | null = null
 
-export function renderCodeHighlight(code: string, lang: Lang) {
-  const mode = useColorMode()
-
+export function renderCodeHighlight(code: string, lang: BuiltinLanguage | 'text' = 'text') {
   if (!promise && !shiki.value) {
     // Only loading when needed
-    promise = getHighlighter({
+    promise = createHighlighterCore({
       themes: [
-        'vitesse-dark',
-        'vitesse-light',
+        import('shiki/themes/vitesse-dark.mjs'),
+        import('shiki/themes/vitesse-light.mjs'),
       ],
       langs: [
-        'css',
-        'javascript',
-        'typescript',
-        'html',
-        'vue',
-        'vue-html',
-        'bash',
+        import('shiki/langs/json.mjs'),
+        import('shiki/langs/yaml.mjs'),
+        import('shiki/langs/css.mjs'),
+        import('shiki/langs/javascript.mjs'),
+        import('shiki/langs/typescript.mjs'),
+        import('shiki/langs/vue.mjs'),
+        import('shiki/langs/vue-html.mjs'),
+        import('shiki/langs/html.mjs'),
+        import('shiki/langs/diff.mjs'),
+        import('shiki/langs/shellscript.mjs'),
       ],
+      engine: createJavaScriptRegexEngine({ forgiving: true }),
     }).then((i) => {
       shiki.value = i
     })
@@ -40,7 +43,10 @@ export function renderCodeHighlight(code: string, lang: Lang) {
   return {
     code: shiki.value!.codeToHtml(code, {
       lang,
-      theme: mode.value === 'dark' ? 'vitesse-dark' : 'vitesse-light',
+      themes: {
+        dark: 'vitesse-dark',
+        light: 'vitesse-light',
+      },
     }),
     supported: true,
   }

@@ -1,13 +1,21 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = withDefaults(
   defineProps<{
     duration: number | undefined
     factor?: number
+    color?: boolean
   }>(),
-  { factor: 1 },
+  {
+    factor: 1,
+    color: true,
+  },
 )
 
 function getLatencyColor(latency: number | undefined) {
+  if (!props.color)
+    return ''
   if (!latency)
     return 'text-gray-400'
   latency = latency * props.factor
@@ -22,17 +30,19 @@ function getLatencyColor(latency: number | undefined) {
   return ''
 }
 
-function formatDuration(duration: number | undefined) {
-  if (!duration)
-    return '-'
-  if (duration < 1)
-    return '<1'
-  return duration.toFixed(2)
-}
+const units = computed(() => {
+  if (!props.duration || props.duration < 1)
+    return ['<1', 'ms']
+  if (props.duration < 1000)
+    return [props.duration.toFixed(0), 'ms']
+  if (props.duration < 1000 * 60)
+    return [(props.duration / 1000).toFixed(1), 's']
+  return [(props.duration / 1000 / 60).toFixed(1), 'min']
+})
 </script>
 
 <template>
   <div :class="getLatencyColor(duration)">
-    {{ formatDuration(duration) }}<span ml-1 text-xs op50>ms</span>
+    {{ units[0] }}<span ml-1 text-xs op50>{{ units[1] }}</span>
   </div>
 </template>

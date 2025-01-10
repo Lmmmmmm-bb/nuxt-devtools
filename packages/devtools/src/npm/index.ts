@@ -1,33 +1,48 @@
+import type { PackageUpdateInfo } from '../types'
 import { createRequire } from 'node:module'
-import { useNuxt } from '@nuxt/kit'
+import { logger, useNuxt } from '@nuxt/kit'
+import { getPackageInfo } from 'local-pkg'
+import { fetch } from 'ofetch'
 import { readPackageJSON } from 'pkg-types'
 import semver from 'semver'
-import { getPackageInfo } from 'local-pkg'
-import type { PackageUpdateInfo } from '../types'
 
 export async function getMainPackageJSON(nuxt = useNuxt()) {
   return readPackageJSON(nuxt.options.rootDir)
 }
 
 export async function checkForUpdateOf(name: string, current?: string, nuxt = useNuxt()): Promise<PackageUpdateInfo | undefined> {
-  if (!current) {
-    const require = createRequire(nuxt.options.rootDir)
-    const info = await getPackageInfo(name, { paths: require.resolve.paths(name) || undefined })
-    if (!info)
+  try {
+    if (!current) {
+      const require = createRequire(nuxt.options.rootDir)
+      const modulePaths = [
+        ...nuxt.options.modulesDir,
+        ...require.resolve.paths(name) || [],
+      ]
+      const info = await getPackageInfo(name, { paths: modulePaths })
+      if (!info)
+        return
+      current = info.packageJson.version
+    }
+
+    if (!current)
       return
-    current = info.packageJson.version
+
+    const { getLatestVersion } = await import('fast-npm-meta')
+    const { version: latest } = await getLatestVersion(name, {
+      fetch,
+    })
+
+    const needsUpdate = !!latest && latest !== current && semver.lt(current, latest)
+
+    return {
+      name,
+      current,
+      latest: latest || current,
+      needsUpdate,
+    }
   }
-
-  const packument = await import('pacote').then(r => r.default?.packument || r.packument)
-  const manifest = await packument(name)
-
-  const latest = manifest['dist-tags'].latest
-  const needsUpdate = latest !== current && semver.lt(current, latest)
-
-  return {
-    name,
-    current,
-    latest,
-    needsUpdate,
+  catch (e) {
+    logger.warn(`Failed to check for update of ${name}:`)
+    logger.warn(e)
   }
 }

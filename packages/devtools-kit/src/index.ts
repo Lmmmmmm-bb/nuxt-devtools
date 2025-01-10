@@ -1,7 +1,7 @@
-import { useNuxt } from '@nuxt/kit'
 import type { BirpcGroup } from 'birpc'
-import { execa } from 'execa'
 import type { ModuleCustomTab, NuxtDevtoolsInfo, NuxtDevtoolsServerContext, SubprocessOptions, TerminalState } from './types'
+import { useNuxt } from '@nuxt/kit'
+import { execa } from 'execa'
 
 /**
  * Hooks to extend a custom tab in devtools.
@@ -39,11 +39,14 @@ export function startSubprocess(
       execaOptions.command,
       execaOptions.args,
       {
+        reject: false,
         ...execaOptions,
         env: {
           COLORS: 'true',
           FORCE_COLOR: 'true',
           ...execaOptions.env,
+          // Force disable Nuxi CLI override
+          __CLI_ARGV__: undefined,
         },
       },
     )
@@ -92,8 +95,7 @@ export function startSubprocess(
     try {
       process?.kill()
     }
-    catch (e) {
-    }
+    catch {}
     nuxt.callHook('devtools:terminal:remove', { id })
   }
 
@@ -116,7 +118,7 @@ export function startSubprocess(
   }
 }
 
-export function extendServerRpc<ClientFunctions = {}, ServerFunctions = {}>(
+export function extendServerRpc<ClientFunctions = Record<string, never>, ServerFunctions = Record<string, never>>(
   namespace: string,
   functions: ServerFunctions,
   nuxt = useNuxt(),

@@ -1,14 +1,22 @@
 <script setup lang="ts">
+import { definePageMeta } from '#imports'
+import { computed } from 'vue'
+import { useClient } from '~/composables/client'
+
 definePageMeta({
   icon: 'carbon-data-set',
   title: 'Payload',
   category: 'analyze',
-  show: () => !!useClient().value,
+  show: () => {
+    const client = useClient()
+    return () => !!client.value
+  },
   order: 7,
 })
 
 const client = useClient()
 const payload = computed(() => client.value?.nuxt.payload)
+const revision = computed(() => client.value?.revision.value)
 
 async function refreshData(keys?: string[]) {
   await client.value?.nuxt.hooks.callHookParallel('app:data:refresh', keys)
@@ -24,7 +32,9 @@ async function refreshData(keys?: string[]) {
       :padding="false"
     >
       <StateGroup
-        :state="payload.state" prefix="$s"
+        :state="payload.state"
+        :revision="revision"
+        prefix="$s"
       />
     </NSectionBlock>
     <NSectionBlock
@@ -42,12 +52,17 @@ async function refreshData(keys?: string[]) {
           Re-fetch all data
         </NButton>
       </template>
-      <StateGroup :state="payload.data">
+      <StateGroup
+        :state="payload.data"
+        :revision="revision"
+      >
         <template #actions="{ isOpen, name }">
-          <NIconButton
+          <NButton
             v-if="isOpen && name"
+            v-tooltip.bottom="`Re-fetch '${name}'`"
             :title="`Re-fetch '${name}'`"
             icon="carbon-recycle"
+            :border="false"
             @click="refreshData([name])"
           />
         </template>
@@ -57,11 +72,12 @@ async function refreshData(keys?: string[]) {
       v-if="payload.functions && Object.keys(payload.functions).length"
       icon="carbon-function"
       text="Functions"
-      description="State for functions (experimental)"
+      description="State for functions"
     >
       <StateEditor
         ml--6
         :state="payload.functions"
+        :revision="revision"
       />
     </NSectionBlock>
   </div>

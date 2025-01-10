@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import type { CodeSnippet } from '~~/../src/types'
+import type { BuiltinLanguage } from 'shiki'
+import type { CodeSnippet } from '../../types'
+import { computed, shallowRef, watchEffect } from 'vue'
+import { useCopy } from '~/composables/editor'
 
 const props = defineProps<{
   codeSnippets: CodeSnippet[]
+  eventType?: string
 }>()
 
 const selected = shallowRef<CodeSnippet | undefined>(props.codeSnippets[0])
 const copy = useCopy()
+
+const selectedLang = computed(() => (selected.value?.lang || 'text') as BuiltinLanguage)
 
 watchEffect(() => {
   if (!props.codeSnippets.includes(selected.value!))
@@ -35,14 +41,14 @@ watchEffect(() => {
     <template v-if="selected">
       <NCodeBlock
         :code="selected.code"
-        :lang="selected.lang"
+        :lang="selectedLang"
         :lines="false"
         w-full of-auto p3
       />
       <div flex="~ gap-2" px3 pb3 n="sm primary">
         <NButton
           icon="carbon-copy"
-          @click="copy(selected!.code)"
+          @click="copy(selected!.code, eventType || `code-snippet-${selected.name}`)"
         >
           Copy
         </NButton>

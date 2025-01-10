@@ -1,4 +1,5 @@
-import { TabCategory } from "../src/types"
+import type { MaybeRefOrGetter } from 'vue'
+import type { TabCategory } from '../src/types'
 
 declare module '#app' {
   interface PageMeta {
@@ -7,7 +8,7 @@ declare module '#app' {
     order?: number
     category?: TabCategory
     show?: () => any
-    badge?: () => string | number | undefined
+    badge?: () => MaybeRefOrGetter<string | number | undefined>
   }
 }
 

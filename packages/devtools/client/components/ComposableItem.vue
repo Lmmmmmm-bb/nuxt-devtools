@@ -1,18 +1,31 @@
 <script setup lang="ts">
 import type { Import, UnimportMeta } from 'unimport'
+import { computed } from 'vue'
+import { ComposablesDocs } from '~/composables/constants'
+import { useCopy, useOpenInEditor } from '~/composables/editor'
 
-const props = defineProps<{
-  item: Import
-  metadata?: UnimportMeta
-  filepath?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    item: Import
+    metadata?: UnimportMeta
+    filepath?: string
+    counter?: boolean
+    classes?: string
+  }>(),
+  {
+    counter: true,
+    classes: 'px2 py1 text-sm bg-gray:5 ',
+  },
+)
 
 const copy = useCopy()
 const openInEditor = useOpenInEditor()
 
 const name = computed(() => props.item.as || props.item.name)
 const usageCount = computed(() => props.metadata?.injectionUsage?.[name.value]?.count || 0)
-const modules = computed(() => props.metadata?.injectionUsage?.[name.value]?.moduleIds || [])
+const modules = computed(() =>
+  (props.metadata?.injectionUsage?.[name.value]?.moduleIds || [])
+    .filter(i => !i.endsWith('?macro=true')))
 
 const docsUrl = computed(() => {
   if (props.item.meta?.docsUrl)
@@ -21,6 +34,7 @@ const docsUrl = computed(() => {
     return (ComposablesDocs.nuxt as any)[props.item.name]
   if (props.item.from === 'vue')
     return (ComposablesDocs.vue as any)[props.item.name]
+  return null
 })
 </script>
 
@@ -28,11 +42,11 @@ const docsUrl = computed(() => {
   <VDropdown :disabled="!props.metadata">
     <button hover:text-primary>
       <code
-        rounded bg-gray:5 px2 py1 font-mono text-sm
-        :class="metadata && !usageCount ? 'op30 hover:op100' : ''"
+        rounded font-mono
+        :class="[metadata && !usageCount ? 'op30 hover:op100' : '', classes]"
       >
         {{ name }}
-        <sup v-if="usageCount" text-primary>x{{ usageCount }}</sup>
+        <sup v-if="usageCount && counter" text-primary>x{{ usageCount }}</sup>
       </code>
     </button>
     <template #popper>
@@ -45,7 +59,7 @@ const docsUrl = computed(() => {
             :markdown="item.meta.description"
           />
           <div flex="~ gap2" n="primary xs">
-            <NButton icon="carbon-copy" @click="copy(name)">
+            <NButton icon="carbon-copy" @click="copy(name, 'imports-name')">
               Copy
             </NButton>
             <NButton v-if="filepath" icon="carbon-code" @click="filepath && openInEditor(filepath)">
@@ -61,7 +75,7 @@ const docsUrl = computed(() => {
             <div text-sm>
               <span op50>It has been referenced </span><strong text-primary>{{ usageCount }}</strong><span op50> times by:</span>
             </div>
-            <div flex="~ col gap-2" items-start pt3 text-sm>
+            <div flex="~ col gap-2" items-start pt3 text-sm op75>
               <FilepathItem
                 v-for="id of modules" :key="id"
                 :filepath="id"

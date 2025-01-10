@@ -1,6 +1,10 @@
-import type { Lang } from 'shiki-es'
+import type { useRoute, useRouter } from '#imports'
 import type { NuxtDevtoolsClient, NuxtDevtoolsHostClient, NuxtDevtoolsIframeClient, VueInspectorData } from '@nuxt/devtools-kit/types'
 import type { Unhead } from '@unhead/schema'
+import type { ComputedRef } from 'vue'
+import { useState } from '#imports'
+import { useColorMode } from '@vueuse/core'
+import { computed, ref } from 'vue'
 import { renderMarkdown } from './client-services/markdown'
 import { renderCodeHighlight } from './client-services/shiki'
 import { extendedRpcMap, rpc } from './rpc'
@@ -9,12 +13,12 @@ export function useClient() {
   return useState<NuxtDevtoolsHostClient>('devtools-client')
 }
 
-export function useClientRoute() {
+export function useClientRoute(): ComputedRef<ReturnType<typeof useRoute>> {
   const client = useClient()
   return computed(() => client.value?.nuxt.vueApp.config.globalProperties?.$route)
 }
 
-export function useClientRouter() {
+export function useClientRouter(): ComputedRef<ReturnType<typeof useRouter>> {
   const client = useClient()
   return computed(() => client.value?.nuxt.vueApp.config.globalProperties?.$router)
 }
@@ -37,9 +41,15 @@ export const showConnectionWarning = computed(() => {
   return connectionTimeout.value && !useClient().value
 })
 
+export function getColorMode() {
+  return useColorMode({
+    storageKey: 'nuxt-devtools-color-mode',
+  })
+}
+
 export function useInjectionClient(): ComputedRef<NuxtDevtoolsIframeClient> {
   const client = useClient()
-  const mode = useColorMode()
+  const mode = getColorMode()
 
   return computed(() => ({
     host: client.value,
@@ -47,7 +57,7 @@ export function useInjectionClient(): ComputedRef<NuxtDevtoolsIframeClient> {
       rpc,
       colorMode: mode.value,
       renderCodeHighlight(code, lang) {
-        return renderCodeHighlight(code, lang as Lang)
+        return renderCodeHighlight(code, lang)
       },
       renderMarkdown(code) {
         return renderMarkdown(code)

@@ -1,25 +1,27 @@
 <script setup lang="ts">
 import type { Import } from 'unimport'
+import { definePageMeta } from '#imports'
 import Fuse from 'fuse.js'
+import { computed, ref } from 'vue'
+import { DETAILS_MAX_ITEMS } from '~/composables/constants'
+import { useAutoImports, useServerConfig } from '~/composables/state'
+import { getModuleNameFromPath, isBuiltInModule, isNodeModulePath } from '~/composables/utils'
 
 definePageMeta({
   icon: 'carbon-function',
   title: 'Imports',
-  order: 3,
+  order: 4,
 })
 
 const config = useServerConfig()
-const onlyUsed = ref(false)
+const filterMode = ref<'all' | 'using' | 'not-used'>('all')
 
 const search = ref('')
 const autoImports = useAutoImports()
 const importsMetadata = computed(() => autoImports.value?.metadata)
 
-const functions = computed(() => autoImports.value?.imports
-  .filter(i => i.as || i.name)
-  .sort((a, b) => (a.as || a.name).localeCompare(b.as || b.name))
-  || [],
-)
+const functions = computed(() => autoImports.value?.imports.filter(i => i.as || i.name).sort((a, b) => (a.as || a.name).localeCompare(b.as || b.name))
+  || [])
 
 const fuse = computed(() => new Fuse(functions.value, {
   keys: [
@@ -37,9 +39,13 @@ const filtered = computed(() => {
     ? fuse.value.search(search.value).map(i => i.item)
     : functions.value
 
-  if (onlyUsed.value && importsMetadata.value) {
+  if (filterMode.value === 'using' && importsMetadata.value) {
     result = result
       .filter(i => (i.as || i.name) in importsMetadata.value!.injectionUsage)
+  }
+  else if (filterMode.value === 'not-used' && importsMetadata.value) {
+    result = result
+      .filter(i => !((i.as || i.name) in importsMetadata.value!.injectionUsage))
   }
 
   const count = {
@@ -72,13 +78,20 @@ const filtered = computed(() => {
 
 <template>
   <div v-if="config" relative h-full of-auto>
-    <Navbar v-model:search="search" pb2>
-      <div v-if="importsMetadata">
-        <NSwitch v-model="onlyUsed" n="primary sm">
-          Show used only
-        </NSwitch>
+    <NNavbar v-model:search="search" pb3>
+      <div v-if="importsMetadata" flex="~ gap-2 items-center">
+        <NIcon icon="carbon-filter" op50 />
+        <NSelectTabs
+          v-model="filterMode"
+          n="primary sm"
+          :options="[
+            { label: 'All', value: 'all' },
+            { label: 'Using', value: 'using' },
+            { label: 'Not used', value: 'not-used' },
+          ]"
+        />
       </div>
-    </Navbar>
+    </NNavbar>
     <NSectionBlock
       v-if="filtered.user.size"
       :open="filtered.count.user <= DETAILS_MAX_ITEMS"

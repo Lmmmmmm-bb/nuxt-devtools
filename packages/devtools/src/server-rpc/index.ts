@@ -1,20 +1,28 @@
-import type { TinyWSRequest } from 'tinyws'
-import type { NodeIncomingMessage, NodeServerResponse } from 'h3'
-import type { WebSocket } from 'ws'
-import { createBirpcGroup } from 'birpc'
 import type { ChannelOptions } from 'birpc'
-
-import { parse, stringify } from 'flatted'
 import type { Nuxt } from 'nuxt/schema'
+import type { Plugin } from 'vite'
+
+import type { WebSocket } from 'ws'
 import type { ClientFunctions, ModuleOptions, NuxtDevtoolsServerContext, ServerFunctions } from '../types'
-import { setupStorageRPC } from './storage'
+import { logger } from '@nuxt/kit'
+import { createBirpcGroup } from 'birpc'
+import { colors } from 'consola/utils'
+import { parse, stringify } from 'flatted'
+import { WS_EVENT_NAME } from '../constant'
+import { getDevAuthToken } from '../dev-auth'
+import { setupAnalyzeBuildRPC } from './analyze-build'
 import { setupAssetsRPC } from './assets'
-import { setupNpmRPC } from './npm'
 import { setupCustomTabRPC } from './custom-tabs'
 import { setupGeneralRPC } from './general'
-import { setupWizardRPC } from './wizard'
-import { setupTerminalRPC } from './terminals'
+import { setupNpmRPC } from './npm'
+import { setupOptionsRPC } from './options'
 import { setupServerRoutesRPC } from './server-routes'
+import { setupServerTasksRPC } from './server-tasks'
+import { setupStorageRPC } from './storage'
+import { setupTelemetryRPC } from './telemetry'
+import { setupTerminalRPC } from './terminals'
+import { setupTimelineRPC } from './timeline'
+import { setupWizardRPC } from './wizard'
 
 export function setupRPC(nuxt: Nuxt, options: ModuleOptions) {
   const serverFunctions = {} as ServerFunctions
@@ -34,8 +42,12 @@ export function setupRPC(nuxt: Nuxt, options: ModuleOptions) {
         return extendedRpcMap.get(namespace)?.[fnName]
       },
       onError(error, name) {
-        console.error(`[nuxt-devtools] RPC error on executing "${name}":`, error)
+        logger.error(
+          colors.yellow(`[nuxt-devtools] RPC error on executing "${colors.bold(name)}":\n`)
+          + colors.red(error?.message || ''),
+        )
       },
+      timeout: 120_000,
     },
   )
 
@@ -64,6 +76,12 @@ export function setupRPC(nuxt: Nuxt, options: ModuleOptions) {
     refresh,
     extendServerRpc,
     openInEditorHooks: [],
+    async ensureDevAuthToken(token: string) {
+      if (options.disableAuthorization)
+        return
+      if (token !== await getDevAuthToken())
+        throw new Error('Invalid dev auth token.')
+    },
   }
 
   // @ts-expect-error untyped
@@ -78,39 +96,58 @@ export function setupRPC(nuxt: Nuxt, options: ModuleOptions) {
     ...setupWizardRPC(ctx),
     ...setupTerminalRPC(ctx),
     ...setupServerRoutesRPC(ctx),
+    ...setupServerTasksRPC(ctx),
+    ...setupAnalyzeBuildRPC(ctx),
+    ...setupOptionsRPC(ctx),
+    ...setupTimelineRPC(ctx),
+    ...setupTelemetryRPC(ctx),
   } satisfies ServerFunctions)
 
   const wsClients = new Set<WebSocket>()
-  const middleware = async (req: NodeIncomingMessage & TinyWSRequest, _res: NodeServerResponse, next: Function) => {
-    // Handle WebSocket
-    if (req.ws) {
-      const ws = await req.ws()
-      wsClients.add(ws)
-      const channel: ChannelOptions = {
-        post: d => ws.send(d),
-        on: fn => ws.on('message', fn),
-        serialize: stringify,
-        deserialize: parse,
-      }
-      rpc.updateChannels((c) => {
-        c.push(channel)
-      })
-      ws.on('close', () => {
-        wsClients.delete(ws)
+
+  const vitePlugin: Plugin = {
+    name: 'nuxt:devtools:rpc',
+    configureServer(server) {
+      server.ws.on('connection', (ws) => {
+        wsClients.add(ws)
+        const channel: ChannelOptions = {
+          post: d => ws.send(JSON.stringify({
+            type: 'custom',
+            event: WS_EVENT_NAME,
+            data: d,
+          })),
+          on: (fn) => {
+            ws.on('message', (e) => {
+              try {
+                const data = JSON.parse(String(e)) || {}
+                if (data.type === 'custom' && data.event === WS_EVENT_NAME) {
+                  // console.log(data.data)
+                  fn(data.data)
+                }
+              }
+              catch {}
+            })
+          },
+          serialize: stringify,
+          deserialize: parse,
+        }
         rpc.updateChannels((c) => {
-          const index = c.indexOf(channel)
-          if (index >= 0)
-            c.splice(index, 1)
+          c.push(channel)
+        })
+        ws.on('close', () => {
+          wsClients.delete(ws)
+          rpc.updateChannels((c) => {
+            const index = c.indexOf(channel)
+            if (index >= 0)
+              c.splice(index, 1)
+          })
         })
       })
-    }
-    else {
-      next()
-    }
+    },
   }
 
   return {
-    middleware,
+    vitePlugin,
     ...ctx,
   }
 }

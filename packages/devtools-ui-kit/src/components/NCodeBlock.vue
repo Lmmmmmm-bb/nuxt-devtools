@@ -1,18 +1,33 @@
 <script setup lang="ts">
+import type { BuiltinLanguage } from 'shiki'
 // This components requires to run in DevTools to render correctly
-import { computed } from 'vue'
+import { computed, nextTick } from 'vue'
 import { devToolsClient } from '../runtime/client'
 
 const props = withDefaults(
   defineProps<{
     code: string
-    lang?: string
+    lang?: BuiltinLanguage | 'text'
     lines?: boolean
-  }>(), {
+    transformRendered?: (code: string) => string
+  }>(),
+  {
     lines: true,
   },
 )
-const rendered = computed(() => devToolsClient.value?.devtools.renderCodeHighlight(props.code, props.lang as string) || { code: props.code, supported: false })
+
+const emit = defineEmits(['loaded'])
+
+const rendered = computed(() => {
+  const result = props.lang === 'text'
+    ? { code: props.code, supported: false }
+    : devToolsClient.value?.devtools.renderCodeHighlight(props.code, props.lang) || { code: props.code, supported: false }
+  if (result.supported && props.transformRendered)
+    result.code = props.transformRendered(result.code)
+  if (result.supported)
+    nextTick(() => emit('loaded'))
+  return result
+})
 </script>
 
 <template>
@@ -39,11 +54,11 @@ const rendered = computed(() => devToolsClient.value?.devtools.renderCodeHighlig
 .n-code-block-lines .shiki code .line::before {
   content: counter(step);
   counter-increment: step;
-  width: 2rem;
+  width: 2.5rem;
   padding-right: 0.5rem;
   margin-right: 0.5rem;
   display: inline-block;
   text-align: right;
-  --at-apply: text-truegray:50;
+  --at-apply: text-truegray: 50;
 }
 </style>

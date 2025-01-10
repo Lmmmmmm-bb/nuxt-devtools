@@ -1,6 +1,15 @@
-import { relative } from 'pathe'
-import type { Ref } from 'vue'
 import type { AsyncDataOptions } from '#app'
+import type { Component } from 'nuxt/schema'
+import type { Ref } from 'vue'
+import type { ComponentRelationship, ComponentWithRelationships, NormalizedHeadTag, SocialPreviewCard, SocialPreviewResolved } from '~/../src/types'
+import { useAsyncData } from '#app/composables/asyncData'
+import { useNuxtApp } from '#app/nuxt'
+import { useState } from '#imports'
+import { useSessionStorage } from '@vueuse/core'
+import { relative } from 'pathe'
+import { triggerRef } from 'vue'
+import { useClient } from './client'
+import { useServerConfig } from './state'
 
 export function isNodeModulePath(path: string) {
   return !!path.match(/[/\\]node_modules[/\\]/) || isPackageName(path)
@@ -64,19 +73,14 @@ export function parseReadablePath(path: string, root: string) {
   }
 }
 
-export function parseExpressRoute(route: string) {
-  return route.split(/(:\w+[\?\*]?)/).filter(Boolean)
-}
-
 export function useAsyncState<T>(key: string, fn: () => Promise<T>, options?: AsyncDataOptions<T>) {
   const nuxt = useNuxtApp()
-  if (!nuxt.payload.unique)
-    nuxt.payload.unique = {}
 
-  if (!nuxt.payload.unique[key])
-    nuxt.payload.unique[key] = useAsyncData(key, fn, options)
+  const unique = nuxt.payload.unique = nuxt.payload.unique || {} as any
+  if (!unique[key])
+    unique[key] = useAsyncData(key, fn, options)
 
-  return nuxt.payload.unique[key].data as Ref<T | null>
+  return unique[key].data as Ref<T | null>
 }
 
 export function getIsMacOS() {
@@ -85,15 +89,103 @@ export function getIsMacOS() {
 
 // @unocss-include
 const requestMethodClass: Record<string, string> = {
-  get: 'bg-green-400:10 text-green-400',
-  post: 'bg-blue-400:10 text-blue-400',
-  put: 'bg-orange-400:10 text-orange-400',
-  delete: 'bg-red-400:10 text-red-400',
-  patch: 'bg-purple-400:10 text-purple-400',
-  head: 'bg-teal-400:10 text-teal-400',
-  default: 'bg-gray-400:10 text-gray-400',
+  get: 'n-green',
+  post: 'n-blue',
+  put: 'n-orange',
+  delete: 'n-red',
+  patch: 'n-purple',
+  head: 'n-teal',
+  default: 'n-gray',
 }
 
 export function getRequestMethodClass(method: string) {
   return requestMethodClass[method.toLowerCase()] || requestMethodClass.default
+}
+
+export function getSocialPreviewCard(
+  rawTags: NormalizedHeadTag[],
+  tags: SocialPreviewCard,
+): SocialPreviewResolved {
+  const resolvedTags: { [key: string]: string | undefined } = {}
+
+  for (const [key, value] of Object.entries(tags)) {
+    for (const tag of value) {
+      const tagValue = rawTags.find(item => item.tag === tag.tag && (tag.name ? item.name === tag.name : true))?.value
+      if (tagValue) {
+        resolvedTags[key] = tagValue
+        break
+      }
+    }
+  }
+
+  return {
+    url: window.location.host,
+    ...resolvedTags,
+  }
+}
+
+export function formatDuration(ms: number | string) {
+  ms = Number(ms)
+  if (Number.isNaN(ms) || ms < 0)
+    return '-'
+  if (ms < 1)
+    return '<1ms'
+  if (ms < 1000)
+    return `${ms}ms`
+  if (ms < 1000 * 60)
+    return `${(ms / 1000).toFixed(2)}s`
+  return `${(ms / 1000 / 60).toFixed(2)}min`
+}
+
+export function getHashColorFromString(name: string, saturation = 65, lightness = 50, opacity: number | string = 1) {
+  let hash = 0
+  for (let i = 0; i < name.length; i++)
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  const h = hash % 360
+  return `hsla(${h}, ${saturation}%, ${lightness}%, ${opacity})`
+}
+
+export function useSessionState<T>(name: string, initialValue: T) {
+  return useState(name, () => {
+    return useSessionStorage(name, initialValue, { listenToStorageChanges: false })
+  })
+}
+
+export function getComponentRelationships(component: Component, relationships?: ComponentRelationship[] | null): ComponentWithRelationships {
+  const dependencies = relationships
+    ?.find(i => i.id === component.filePath)
+    ?.deps
+    ?.map(i => relationships?.find(j => j.id === i)?.id)
+    .filter(Boolean) as string[] | undefined
+  const dependents = relationships
+    ?.filter(i => i.deps.includes(component.filePath))
+    .map(i => i.id)
+
+  return {
+    component,
+    dependencies,
+    dependents,
+  }
+}
+
+export function pluralizeByCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count <= 1 ? singular : plural}`
+}
+
+export function refreshData() {
+  const client = useClient()
+  const nuxt = useNuxtApp()
+
+  nuxt.hooks.callHookParallel('app:data:refresh', Object.keys(nuxt.payload.data))
+  triggerRef(client)
+  client.value.revision.value += 1
+}
+
+export function reloadPage() {
+  location.reload()
+}
+
+export function useNuxtCompatibilityVersion() {
+  const config = useServerConfig()
+  return config.value?.future.compatibilityVersion
 }

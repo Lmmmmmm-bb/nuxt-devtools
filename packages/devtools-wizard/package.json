@@ -1,40 +1,44 @@
 {
   "name": "@nuxt/devtools-wizard",
   "type": "module",
-  "version": "0.4.6",
+  "version": "2.0.0-beta.0",
   "description": "CLI Wizard to toggle Nuxt DevTools",
   "license": "MIT",
-  "repository": "nuxt/devtools",
+  "homepage": "https://devtools.nuxt.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nuxt/devtools.git",
+    "directory": "packages/devtools-wizard"
+  },
   "main": "./dist/index.mjs",
   "bin": "./cli.mjs",
   "files": [
-    "dist",
-    "*.d.ts",
     "*.cjs",
-    "*.mjs"
+    "*.d.ts",
+    "*.mjs",
+    "dist"
   ],
   "scripts": {
     "build": "unbuild",
     "stub": "unbuild --stub",
     "dev:prepare": "nr stub",
-    "prepublishOnly": "pnpm build"
+    "prepack": "pnpm build"
   },
   "dependencies": {
-    "consola": "^3.1.0",
-    "diff": "^5.1.0",
-    "execa": "^7.1.1",
-    "global-dirs": "^3.0.1",
-    "magicast": "^0.2.5",
-    "pathe": "^1.1.0",
-    "picocolors": "^1.0.0",
-    "pkg-types": "^1.0.3",
-    "prompts": "^2.4.2",
-    "rc9": "^2.1.0",
-    "semver": "^7.5.0"
+    "consola": "catalog:",
+    "diff": "catalog:",
+    "execa": "catalog:",
+    "global-directory": "catalog:",
+    "magicast": "catalog:",
+    "pathe": "catalog:",
+    "pkg-types": "catalog:",
+    "prompts": "catalog:",
+    "rc9": "catalog:",
+    "semver": "catalog:"
   },
   "devDependencies": {
-    "@types/diff": "^5.0.3",
-    "@types/prompts": "^2.4.4",
-    "unbuild": "^1.2.1"
+    "@types/diff": "catalog:",
+    "@types/prompts": "catalog:",
+    "unbuild": "catalog:"
   }
 }

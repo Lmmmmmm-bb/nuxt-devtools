@@ -1,45 +1,55 @@
-import type { NuxtDevtoolsGlobal } from '../../src/types'
+import { defineNuxtPlugin, useRouter } from '#imports'
+import { triggerRef } from 'vue'
+import { useClient, useComponentInspectorData } from '../composables/client'
+import { rpc } from '../composables/rpc'
 
 export default defineNuxtPlugin(() => {
   const client = useClient()
   const inspectorData = useComponentInspectorData()
   const router = useRouter()
 
-  window.__NUXT_DEVTOOLS_VIEW__ = <NuxtDevtoolsGlobal>{
-    setClient(_client) {
-      if (client.value === _client)
-        return
-
-      client.value = _client
-
-      _client.hooks.hook('host:update:reactivity', () => {
-        // TODO: use triggerRef after: https://github.com/vuejs/core/pull/7507
-        // triggerRef(client)
-        if (client.value)
-          client.value = { ...client.value }
-      })
-      _client.hooks.hook('host:inspector:close', () => {
-        if (router.currentRoute.value.path === '/modules/custom-builtin-vscode')
-          return
-        if (router.currentRoute.value.path === '/__inspecting')
-          router.go(-1)
-      })
-      _client.hooks.hook('host:inspector:update', (data) => {
-        inspectorData.value = data
-      })
-      _client.hooks.hook('host:inspector:click', async (_, file, line, column) => {
-        const url = `./${file}:${line}:${column}`
-        await rpc.openInEditor(url)
-      })
-
-      // eslint-disable-next-line no-console
-      console.log('[nuxt-devtools] Client connected', _client)
-    },
+  function onUpdateReactivity() {
+    triggerRef(client)
+    client.value.revision.value += 1
   }
 
+  function onInspectorUpdate(data: any) {
+    inspectorData.value = data
+  }
+
+  function onInspectorClick(url: URL) {
+    const query = url.searchParams.get('file')
+    if (query)
+      rpc.openInEditor(query)
+    else
+      console.error('[nuxt-devtools] Failed to open file from Vue Inspector', url)
+  }
+
+  Object.defineProperty(window, '__NUXT_DEVTOOLS_VIEW__', {
+    value: {
+      setClient(_client) {
+        if (client.value === _client)
+          return
+
+        client.value = _client
+
+        _client.hooks.hook('host:update:reactivity', onUpdateReactivity)
+        _client.hooks.hook('host:inspector:update', onInspectorUpdate)
+        _client.hooks.hook('host:inspector:click', onInspectorClick)
+        _client.hooks.hook('host:action:reload', () => location.reload())
+        _client.hooks.hook('host:action:navigate', (path: string) => router.push(path))
+
+        // eslint-disable-next-line no-console
+        console.log('[nuxt-devtools] Client connected', _client)
+      },
+    } as typeof window['__NUXT_DEVTOOLS_VIEW__'],
+    enumerable: false,
+    configurable: true,
+  })
+
   router.afterEach(() => {
-    const path = router.currentRoute.value.path
-    if (path.includes('__'))
+    const path = router.currentRoute.value?.path
+    if (!path || path.includes('__'))
       return
     client.value?.hooks.callHook('devtools:navigate', path)
   })

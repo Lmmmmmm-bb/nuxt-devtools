@@ -1,5 +1,15 @@
 <script setup lang="ts">
 import type { ModuleCustomTab } from '~/../src/types'
+import { useRoute, useRouter } from '#app/composables/router'
+import { definePageMeta } from '#imports'
+import { computed, onMounted } from 'vue'
+import { isDevAuthed, requestForAuth } from '~/composables/dev-auth'
+import { rpc } from '~/composables/rpc'
+import { useAllTabs } from '~/composables/state-tabs'
+
+const props = defineProps<{
+  name?: string
+}>()
 
 definePageMeta({
   layout: 'full',
@@ -7,9 +17,9 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
-const name = computed(() => route.params.name)
+const name = computed(() => props.name ?? route.params.name)
 const tabs = useAllTabs()
-const tab = computed(() => tabs.value.find(i => i.name === name.value) as ModuleCustomTab)
+const tab = computed(() => tabs.value.find(i => i.name === name.value) as ModuleCustomTab | undefined)
 
 onMounted(() => {
   // if the tab is not found and passed a certain timeout, redirect to the overview page
@@ -18,6 +28,9 @@ onMounted(() => {
       if (!tab.value)
         router.push('/modules/overview')
     }, 2000)
+  }
+  else if (tab.value.requireAuth && !isDevAuthed.value) {
+    requestForAuth()
   }
 })
 </script>
@@ -39,6 +52,9 @@ onMounted(() => {
       </div>
     </NPanelGrids>
   </template>
+  <template v-else-if="tab.requireAuth && !isDevAuthed">
+    <AuthRequiredPanel />
+  </template>
   <template v-else-if="tab.view.type === 'iframe'">
     <IframeView :tab="tab" />
   </template>
@@ -47,11 +63,12 @@ onMounted(() => {
   </template>
   <template v-else-if="tab.view.type === 'launch'">
     <LaunchPage
+      :name="`custom-${tab.name}`"
       :icon="tab.view.icon || tab.icon"
       :title="tab.view.title || tab.title"
       :description="tab.view.description"
       :actions="tab.view.actions"
-      @action="idx => rpc.customTabAction(tab.name, idx)"
+      @action="idx => rpc.customTabAction(tab!.name, idx)"
     />
   </template>
   <template v-else>

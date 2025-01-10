@@ -1,26 +1,4 @@
-export interface DevToolsFrameState {
-  width: number
-  height: number
-  bottom: number
-  left: number
-  open: boolean
-  route: string
-  position: 'left' | 'right' | 'bottom' | 'top'
-}
-
-export interface DevToolsUISettings {
-  componentsView: 'list' | 'graph'
-  componentsGraphShowNodeModules: boolean
-  componentsGraphShowPages: boolean
-  componentsGraphShowLayouts: boolean
-  componentsGraphShowWorkspace: boolean
-  interactionCloseOnOutsideClick: boolean
-  showExperimentalFeatures: boolean
-  showHelpButtons: boolean
-  scale: number
-  hiddenTabs: string[]
-  hiddenTabCategories: string[]
-}
+import type { ModuleStaticInfo } from '@nuxt/devtools-kit/types'
 
 export interface SocialPreviewResolved {
   url?: string
@@ -31,8 +9,35 @@ export interface SocialPreviewResolved {
   imageAlt?: string
 }
 
+export interface SocialPreviewCard {
+  url?: SocialPreviewCardItem[]
+  title?: SocialPreviewCardItem[]
+  description?: SocialPreviewCardItem[]
+  favicon?: SocialPreviewCardItem[]
+  image?: SocialPreviewCardItem[]
+  imageAlt?: SocialPreviewCardItem[]
+}
+
+interface SocialPreviewCardItem {
+  tag: string
+  name?: string
+}
+
 export interface NormalizedHeadTag {
   tag: string
   name: string
   value: string
 }
+
+export interface InstallingModulestate {
+  name: string
+  info: ModuleStaticInfo
+  processId: string
+}
+
+export interface AnalyzeBuildingState {
+  name: string
+  processId: string
+}
+
+export type ModuleActionType = 'install' | 'uninstall'

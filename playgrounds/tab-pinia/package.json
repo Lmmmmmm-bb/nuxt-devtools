@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0-beta.0",
+  "private": true,
+  "scripts": {
+    "dev": "nuxi dev",
+    "build": "nuxi build",
+    "start": "node .output/server/index.mjs",
+    "test": "cypress run"
+  },
+  "dependencies": {
+    "@pinia/nuxt": "catalog:",
+    "@vueuse/core": "catalog:",
+    "pinia": "catalog:"
+  },
+  "devDependencies": {
+    "@exampledev/new.css": "catalog:",
+    "cypress": "catalog:",
+    "nuxt": "catalog:"
+  }
+}

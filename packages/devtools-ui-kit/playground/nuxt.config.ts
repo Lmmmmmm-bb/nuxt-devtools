@@ -1,7 +1,9 @@
-import { resolve } from 'node:path'
 import { defineNuxtConfig } from 'nuxt/config'
-import '@unocss/nuxt'
+import { createResolver } from 'nuxt/kit'
 import DevtoolsUIKit from '../src/module'
+import '@unocss/nuxt'
+
+const resolver = createResolver(import.meta.url)
 
 export default defineNuxtConfig({
   modules: [
@@ -11,13 +13,13 @@ export default defineNuxtConfig({
     dev: true,
   },
   nitro: {
-    rootDir: resolve(__dirname, '..'),
+    rootDir: resolver.resolve('..'),
   },
   unocss: {
     preflight: true,
-    configFile: resolve(__dirname, '../unocss.config.ts'),
+    configFile: resolver.resolve('../unocss.config.ts'),
   },
   alias: {
-    '@nuxt/devtools-kit/iframe-client': resolve(__dirname, './stub/iframe-client.ts'),
+    '@nuxt/devtools-kit/iframe-client': resolver.resolve('./stub/iframe-client.ts'),
   },
 })

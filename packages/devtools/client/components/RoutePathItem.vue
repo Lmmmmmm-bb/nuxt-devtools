@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RouteInfo } from '~~/../src/types'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   route: RouteInfo
@@ -12,11 +13,28 @@ const emit = defineEmits<{
 const partsInput = ref<string[]>([])
 const parts = computed(() => {
   const _ = parseExpressRoute(props.route.path)
+  // eslint-disable-next-line vue/no-side-effects-in-computed-properties
   partsInput.value = Array.from({ length: _.length }, () => '')
   return _
 })
 
-const path = computed(() => parts.value.map((i, idx) => i[0] === ':' ? partsInput.value[idx] : i).join('').replace(/\/+/g, '/'))
+function parseExpressRoute(route: string) {
+  return route
+    .split(/(:\w+[?*]?(?:\(\))?)/)
+    .filter(Boolean)
+    .map(i => i[0] === ':'
+      ? i.replace(/\(\)$/, '?')
+      : i)
+}
+
+const path = computed(() => parts.value
+  .map(
+    (i, idx) => i[0] === ':'
+      ? partsInput.value[idx]
+      : i,
+  )
+  .join('')
+  .replace(/\/+/g, '/'))
 const hasWildcard = computed(() => props.route.path.includes(':'))
 
 function navigate() {
@@ -44,7 +62,7 @@ function navigate() {
             <div px2 text-sm op50>
               Fill params and navigate:
             </div>
-            <div flex="~" items-center p2 font-mono text-sm>
+            <div flex="~" items-center p2 text-sm font-mono>
               <template v-for="part, idx of parts" :key="idx">
                 <NTextInput
                   v-if="part[0] === ':'"
@@ -56,7 +74,7 @@ function navigate() {
               </template>
             </div>
           </template>
-          <NButton block n="primary">
+          <NButton type="submit" block n="primary">
             Navigate
           </NButton>
         </form>

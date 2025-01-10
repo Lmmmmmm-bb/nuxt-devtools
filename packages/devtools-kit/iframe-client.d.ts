@@ -1,1 +1,1 @@
-export * from './dist/iframe-client'
+export * from './dist/runtime/iframe-client'

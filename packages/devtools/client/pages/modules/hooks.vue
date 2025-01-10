@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { definePageMeta } from '#imports'
+import { computed } from 'vue'
+import { useClient } from '~/composables/client'
+import { useServerHooks } from '~/composables/state'
+
 definePageMeta({
   icon: 'carbon-ibm-cloud-direct-link-2-connect',
   title: 'Hooks',
@@ -7,7 +12,7 @@ definePageMeta({
 
 const serverHooks = useServerHooks()
 const client = useClient()
-const clientHooks = computed(() => client.value?.getClientHooksMetrics())
+const clientHooks = computed(() => client.value?.metrics.clientHooks())
 </script>
 
 <template>
@@ -22,9 +27,10 @@ const clientHooks = computed(() => client.value?.getClientHooksMetrics())
       <HooksTable :hooks="clientHooks" />
     </NSectionBlock>
     <NSectionBlock
+      v-if="serverHooks?.length"
       icon="carbon-ibm-cloud-direct-link-2-dedicated"
       text="Server Hooks"
-      :description="`Total hooks: ${serverHooks.length}`"
+      :description="`Total hooks: ${serverHooks?.length}`"
       padding="pl4 pr6"
     >
       <HooksTable :hooks="serverHooks" />

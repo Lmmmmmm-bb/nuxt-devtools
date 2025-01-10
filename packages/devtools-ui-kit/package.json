@@ -1,17 +1,22 @@
 {
   "name": "@nuxt/devtools-ui-kit",
   "type": "module",
-  "version": "0.4.6",
+  "version": "2.0.0-beta.0",
   "license": "MIT",
-  "repository": "nuxt/devtools",
+  "homepage": "https://devtools.nuxt.com/module/ui-kit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nuxt/devtools.git",
+    "directory": "packages/devtools-ui-kit"
+  },
   "exports": {
     ".": {
-      "require": "./module.cjs",
-      "import": "./dist/module.mjs"
+      "import": "./dist/module.mjs",
+      "require": "./module.cjs"
     },
     "./module": {
-      "require": "./module.cjs",
-      "import": "./dist/module.mjs"
+      "import": "./dist/module.mjs",
+      "require": "./module.cjs"
     },
     "./unocss": {
       "import": "./dist/unocss.mjs"
@@ -19,41 +24,44 @@
   },
   "main": "./dist/module.mjs",
   "files": [
-    "dist",
-    "*.cjs"
+    "*.cjs",
+    "dist"
   ],
   "scripts": {
-    "build": "nuxt-build-module",
-    "stub": "nuxt-build-module --stub",
+    "build": "nuxt-build-module build",
+    "stub": "nuxt-build-module build --stub",
     "dev": "nuxi dev playground",
-    "prepublishOnly": "npm run build",
+    "prepack": "pnpm build",
     "playground:build": "nuxi generate playground"
   },
   "peerDependencies": {
     "@nuxt/devtools": "workspace:*"
   },
   "dependencies": {
-    "@iconify-json/carbon": "^1.1.16",
-    "@nuxt/devtools": "workspace:*",
+    "@iconify-json/carbon": "catalog:",
+    "@iconify-json/logos": "catalog:",
+    "@iconify-json/ri": "catalog:",
+    "@iconify-json/tabler": "catalog:",
     "@nuxt/devtools-kit": "workspace:*",
-    "@nuxt/kit": "^3.4.3",
-    "@nuxtjs/color-mode": "^3.2.0",
-    "@unocss/core": "^0.51.12",
-    "@unocss/nuxt": "^0.51.12",
-    "@unocss/preset-attributify": "^0.51.12",
-    "@unocss/preset-icons": "^0.51.12",
-    "@unocss/preset-mini": "^0.51.12",
-    "@unocss/reset": "^0.51.12",
-    "@vueuse/core": "^10.1.2",
-    "@vueuse/integrations": "^10.1.2",
-    "@vueuse/nuxt": "^10.1.2",
-    "defu": "^6.1.2",
-    "focus-trap": "^7.4.0",
-    "unocss": "^0.51.12",
-    "v-lazy-show": "^0.2.3"
+    "@nuxt/kit": "catalog:",
+    "@unocss/core": "catalog:",
+    "@unocss/nuxt": "catalog:",
+    "@unocss/preset-attributify": "catalog:",
+    "@unocss/preset-icons": "catalog:",
+    "@unocss/preset-mini": "catalog:",
+    "@unocss/reset": "catalog:",
+    "@vueuse/core": "catalog:",
+    "@vueuse/integrations": "catalog:",
+    "@vueuse/nuxt": "catalog:",
+    "defu": "catalog:",
+    "focus-trap": "catalog:",
+    "splitpanes": "catalog:",
+    "unocss": "catalog:",
+    "v-lazy-show": "catalog:"
   },
   "devDependencies": {
-    "nuxt": "^3.4.3"
+    "@nuxt/devtools": "workspace:*",
+    "nuxt": "catalog:"
   },
   "publishConfig": {
     "access": "public"

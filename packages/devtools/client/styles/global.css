@@ -2,8 +2,8 @@ html {
   --at-apply: font-sans;
   overflow-y: scroll;
   overscroll-behavior: none;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 body::-webkit-scrollbar {
   display: none;
@@ -14,21 +14,22 @@ body {
 }
 
 html.dark {
-  background: #151515;
+  background: #111;
   color-scheme: dark;
 }
 
 /* Overrides Floating Vue */
 .v-popper--theme-dropdown .v-popper__inner,
 .v-popper--theme-tooltip .v-popper__inner {
-  --at-apply: bg-base text-black dark:text-white rounded border border-base shadow;
+  --at-apply: bg-base text-black dark-text-white;
+  --at-apply: rounded border border-base! shadow;
   box-shadow: 0 6px 30px #0000001a;
 }
 
 .v-popper--theme-tooltip .v-popper__arrow-inner,
 .v-popper--theme-dropdown .v-popper__arrow-inner {
   visibility: visible;
-  --at-apply: border-white dark:border-hex-121212;
+  --at-apply: border-white dark-border-hex-121212;
 }
 
 .v-popper--theme-tooltip .v-popper__arrow-outer,
@@ -43,71 +44,50 @@ html.dark {
 
 /* Markdown */
 .n-markdown a {
-  --at-apply: text-primary hover:underline;
+  --at-apply: text-primary hover-underline;
 }
 .prose a {
-  --uno: hover:text-primary;
+  --uno: hover-text-primary;
 }
 .prose code::before {
-  content: ""
+  content: '';
 }
 .prose code::after {
-  content: ""
+  content: '';
 }
 .prose hr {
   --uno: border-solid border-1 border-b border-base h-1px w-full block my-2 op50;
 }
 
-/* Shiki */
-pre code .line {
-  display: initial;
+.dark .shiki {
+  background: var(--shiki-dark-bg, inherit) !important;
 }
 
-/* Splitpanes */
-.splitpanes__splitter {
-  position: relative;
-}
-.splitpanes__splitter:before {
-  position: absolute;
-  left: 0;
-  top: 0;
-  transition: .2s ease;
-  content: '';
-  transition: opacity 0.4s;
-  z-index: 1;
-}
-.splitpanes__splitter:hover:before {
-  background: #8881;
-  opacity: 1;
-}
-.splitpanes--vertical>.splitpanes__splitter {
-  min-width: 0 !important;
-  width: 0 !important;
-}
-.splitpanes--horizontal>.splitpanes__splitter {
-  min-height: 0 !important;
-  height: 0 !important;
-}
-.splitpanes--vertical>.splitpanes__splitter:before {
-  left: -5px;
-  right: -4px;
-  height: 100%;
-}
-.splitpanes--horizontal>.splitpanes__splitter:before {
-  top: -5px;
-  bottom: -4px;
-  width: 100%;
+.dark .shiki span {
+  color: var(--shiki-dark, inherit) !important;
 }
 
 /* JSON Editor */
 textarea {
-  background: #8881
+  background: #8881;
 }
 
-.json-editor-vue {
-  --jse-theme-color: #8886 !important;
-  --jse-theme-color-highlight: #8889 !important;
-  --jse-background-color: #8888880A !important;
+:root {
+  --jse-theme-color: #fff !important;
+  --jse-text-color-inverse: #777 !important;
+  --jse-theme-color-highlight: #eee !important;
+  --jse-panel-background: #fff !important;
+  --jse-background-color: var(--jse-panel-background) !important;
+  --jse-error-color: #ee534150 !important;
+  --jse-main-border: none !important;
+}
+
+.dark,
+.jse-theme-dark {
+  --jse-panel-background: #111 !important;
+  --jse-theme-color: #111 !important;
+  --jse-text-color-inverse: #fff !important;
+  --jse-main-border: none !important;
 }
 
 .json-editor-vue .no-main-menu {
@@ -132,18 +112,23 @@ textarea {
   height: 6px;
 }
 
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 ::-webkit-scrollbar-track {
   background: var(--c-border);
   border-radius: 1px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #8885;
+  background: #8881;
+  transition: background 0.2s ease;
   border-radius: 1px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8886;
+  background: #8885;
 }
 
 .no-scrollbar::-webkit-scrollbar {

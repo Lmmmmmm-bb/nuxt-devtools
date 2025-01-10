@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import { useNuxtApp } from '#app/nuxt'
+import { createTemplatePromise } from '@vueuse/core'
+import { useClient } from '~/composables/client'
+import { ensureDevAuthToken } from '~/composables/dev-auth'
+import { useRestartDialogs } from '~/composables/dialog'
+import { rpc } from '~/composables/rpc'
+
 const nuxt = useNuxtApp()
 const state = useRestartDialogs()
 const client = useClient()
@@ -13,11 +20,11 @@ nuxt.hook('devtools:terminal:exit', ({ id, code }) => {
       state.value = state.value.filter(dialog => dialog.id !== id)
       PromiseConfirm
         .start(dialog.message)
-        .then((result) => {
+        .then(async (result) => {
           if (result) {
-            rpc.restartNuxt()
+            rpc.restartNuxt(await ensureDevAuthToken())
             setTimeout(() => {
-              client.value?.reloadPage()
+              client.value?.app.reload()
             }, 500)
           }
         })

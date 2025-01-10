@@ -1,15 +1,16 @@
 import type { Preset, RuleContext } from '@unocss/core'
 import type { UnocssNuxtOptions } from '@unocss/nuxt'
 import type { Theme } from '@unocss/preset-uno'
-import { parseColor } from '@unocss/preset-mini/utils'
 import { theme as unoTheme } from '@unocss/preset-mini'
 import { fonts } from '@unocss/preset-mini/rules'
+import { parseColor } from '@unocss/preset-mini/utils'
 import {
   mergeDeep,
   presetAttributify,
   presetIcons,
   presetTypography,
   presetUno,
+  presetWebFonts,
   transformerDirectives,
   transformerVariantGroup,
 } from 'unocss'
@@ -21,10 +22,9 @@ export function unocssPreset(): Preset {
     name: '@nuxt/devtools-ui-kit',
     theme: mergeDeep<Theme>(unoTheme, {
       colors: {
+        brand: '#00DC82',
+        primary: '#099e61',
         context: 'rgba(var(--nui-c-context),%alpha)',
-      },
-      fontFamily: {
-        sans: 'Avenir, Helvetica, Arial, sans-serif',
       },
     }),
     rules: [
@@ -44,7 +44,7 @@ export function unocssPreset(): Preset {
         'color': 'white !important',
       }],
       ['n-disabled', {
-        'opacity': 0.4,
+        'opacity': 0.6,
         'pointer-events': 'none',
         'filter': 'saturate(0)',
       }],
@@ -113,19 +113,22 @@ export function unocssPreset(): Preset {
       'n-button-icon': '-ml-0.2em mr-0.2em text-1.1em',
 
       // checkbox
-      'n-checkbox': 'inline-flex gap-1 items-center',
+      'n-checkbox': 'inline-flex gap-1 items-center rounded',
+      'n-checkbox-hover': 'op100 n-bg-hover cursor-pointer',
       'n-checkbox-box': 'border n-border-base w-1.1em h-1.1em mr-1 text-white flex flex-none items-center rounded-sm overflow-visible',
       'n-checkbox-box-checked': 'bg-context border-context',
       'n-checkbox-icon': 'carbon-checkmark w-1em h-1em m-auto',
 
       // radio
-      'n-radio-box': 'border n-border-base w-1.2em h-1.2em mr-1 text-white flex flex-none rounded-full overflow-visible',
+      'n-radio-box': 'border rounded n-border-base w-1.2em h-1.2em mr-1 text-white flex flex-none rounded-full overflow-visible',
+      'n-radio-hover': 'op100 n-bg-hover cursor-pointer',
       'n-radio-box-checked': 'border-context',
       'n-radio-inner': 'bg-context rounded-1/2 w-0 h-0 m-auto',
       'n-radio-inner-checked': 'w-0.8em h-0.8em',
 
       // switch
-      'n-switch-base': 'inline-flex items-center select-none',
+      'n-switch-base': 'inline-flex items-center select-none rounded-full pe-2',
+      'n-switch-hover': 'op100 n-bg-hover cursor-pointer',
       'n-switch-slider': 'mr-1 rounded-full border n-border-base relative p-2px',
       'n-switch-slider-checked': 'border-context/20 bg-context/10',
       'n-switch-thumb': 'h-1em w-1em rounded-1/2 border n-border-base ml-0 mr-0.8em',
@@ -143,10 +146,18 @@ export function unocssPreset(): Preset {
       // icon-button
       'n-icon-button': 'aspect-1/1 w-1.6em h-1.6em flex items-center justify-center rounded op50 hover:op100 hover:n-bg-active',
 
+      // badge
+      'n-badge-base': 'bg-context/10 text-context rounded whitespace-nowrap select-none',
+      'n-badge': 'n-badge-base mx-0.5 px-1.5 py-0.5 text-xs',
+
       // loading
       'n-loading': 'flex h-full w-full justify-center items-center',
       'n-panel-grids': 'n-panel-grids-light dark:n-panel-grids-dark',
       'n-panel-grids-center': 'n-panel-grids flex flex-col h-full gap-2 items-center justify-center',
+
+      // glass
+      'n-glass-effect': 'backdrop-blur-6 bg-white/80 dark:bg-[#151515]/90',
+      'n-navbar-glass': 'sticky z-10 top-0 n-glass-effect',
     },
   }
 }
@@ -167,6 +178,12 @@ export function extendUnocssOptions(user: UnocssNuxtOptions = {}): UnocssNuxtOpt
           'vertical-align': 'middle',
         },
         // ...(user?.icons || {})
+      }),
+      presetWebFonts({
+        fonts: {
+          sans: 'DM Sans',
+          mono: 'DM Mono',
+        },
       }),
       unocssPreset(),
       ...(user.presets || []),

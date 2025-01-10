@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useDevToolsOptions } from '../composables/storage-options'
+
 const open = ref(false)
-const {
-  showHelpButtons,
-} = useDevToolsSettings()
+const { showHelpButtons } = useDevToolsOptions('ui')
 </script>
 
 <template>
@@ -29,13 +30,15 @@ const {
     <Transition name="slide-in">
       <div
         v-if="open" border="l base"
-        class="prose" pos="fixed bottom-0 right-0 top-0" z-200 w-150 px8 py4 bg-base
+        class="prose" pos="fixed bottom-0 right-0 top-0"
+        z-200 h-full w-150 overflow-auto px8 py4 bg-base
       >
         <slot />
-        <NIconButton
+        <NButton
           icon="carbon-close"
           pos="absolute top-3 right-3"
           rounded-full text-xl
+          :border="false"
           @click="open = false"
         />
       </div>

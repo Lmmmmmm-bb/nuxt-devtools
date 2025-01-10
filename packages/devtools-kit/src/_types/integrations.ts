@@ -1,5 +1,6 @@
-import type { RouteRecordNormalized } from 'vue-router'
+import type { Component } from 'nuxt/schema'
 import type { Import, UnimportMeta } from 'unimport'
+import type { RouteRecordNormalized } from 'vue-router'
 
 export interface HookInfo {
   name: string
@@ -25,7 +26,7 @@ export interface PackageUpdateInfo {
   needsUpdate: boolean
 }
 
-export type PackageManagerName = 'npm' | 'yarn' | 'pnpm'
+export type PackageManagerName = 'npm' | 'yarn' | 'pnpm' | 'bun'
 
 export type NpmCommandType = 'install' | 'uninstall' | 'update'
 
@@ -47,9 +48,17 @@ export interface RouteInfo extends Pick<RouteRecordNormalized, 'name' | 'path' |
 export interface ServerRouteInfo {
   route: string
   filepath: string
-  path: string
   method?: string
-  type: 'api' | 'route'
+  type: 'api' | 'route' | 'runtime' | 'collection'
+  routes?: ServerRouteInfo[]
+}
+
+export type ServerRouteInputType = 'string' | 'number' | 'boolean' | 'file' | 'date' | 'time' | 'datetime-local'
+export interface ServerRouteInput {
+  active: boolean
+  key: string
+  value: any
+  type?: ServerRouteInputType
 }
 
 export interface Payload {
@@ -58,6 +67,26 @@ export interface Payload {
   data?: Record<string, any>
   state?: Record<string, any>
   functions?: Record<string, any>
+}
+
+export interface ServerTaskInfo {
+  name: string
+  handler: string
+  description: string
+  type: 'collection' | 'task'
+  tasks?: ServerTaskInfo[]
+}
+
+export interface ScannedNitroTasks {
+  tasks: {
+    [name: string]: {
+      handler: string
+      description: string
+    }
+  }
+  scheduledTasks: {
+    [cron: string]: string[]
+  }
 }
 
 export interface PluginInfoWithMetic {
@@ -74,6 +103,17 @@ export interface PluginMetric {
   duration: number
 }
 
+export interface LoadingTimeMetric {
+  ssrStart?: number
+  appInit?: number
+  appLoad?: number
+  pageStart?: number
+  pageEnd?: number
+  pluginInit?: number
+  hmrStart?: number
+  hmrEnd?: number
+}
+
 export interface BasicModuleInfo {
   entryPath?: string
   meta?: {
@@ -81,7 +121,18 @@ export interface BasicModuleInfo {
   }
 }
 
-export interface ModuleMetric {
+export interface InstalledModuleInfo {
+  name?: string
+  isPackageModule: boolean
+  isUninstallable: boolean
+  info?: ModuleStaticInfo
+  entryPath?: string
+  meta?: {
+    name?: string
+  }
+}
+
+export interface ModuleStaticInfo {
   name: string
   description: string
   repo: string
@@ -92,6 +143,7 @@ export interface ModuleMetric {
   learn_more: string
   category: string
   type: ModuleType
+  stats: ModuleStats
   maintainers: MaintainerInfo[]
   contributors: GitHubContributor[]
   compatibility: ModuleCompatibility
@@ -100,6 +152,13 @@ export interface ModuleMetric {
 export interface ModuleCompatibility {
   nuxt: string
   requires: { bridge?: boolean | 'optional' }
+}
+
+export interface ModuleStats {
+  downloads: number
+  stars: number
+  publishedAt: number
+  createdAt: number
 }
 
 export type CompatibilityStatus = 'working' | 'wip' | 'unknown' | 'not-working'
@@ -131,7 +190,7 @@ export interface VueInspectorClient {
   enable: () => void
   disable: () => void
   toggleEnabled: () => void
-  openInEditor: (baseUrl: string, file: string, line: number, column: number) => void
+  openInEditor: (url: URL) => void
   onUpdated: () => void
 }
 
@@ -146,6 +205,14 @@ export interface AssetInfo {
   filePath: string
   size: number
   mtime: number
+  layer?: string
+}
+
+export interface AssetEntry {
+  path: string
+  content: string
+  encoding?: BufferEncoding
+  override?: boolean
 }
 
 export interface CodeSnippet {
@@ -158,4 +225,17 @@ export interface CodeSnippet {
 export interface ComponentRelationship {
   id: string
   deps: string[]
+}
+
+export interface ComponentWithRelationships {
+  component: Component
+  dependencies?: string[]
+  dependents?: string[]
+}
+
+export interface CodeServerOptions {
+  codeBinary: string
+  launchArg: string
+  licenseTermsArg: string
+  connectionTokenArg: string
 }

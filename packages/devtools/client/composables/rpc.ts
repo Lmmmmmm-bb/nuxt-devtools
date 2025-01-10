@@ -1,14 +1,17 @@
+import type { ClientFunctions, ServerFunctions } from '../../src/types'
+import { useDebounce } from '@vueuse/core'
 import { createBirpc } from 'birpc'
 import { parse, stringify } from 'flatted'
-import type { ClientFunctions, ServerFunctions } from '../../src/types'
+import { tryCreateHotContext } from 'vite-hot-client'
+import { ref, shallowRef } from 'vue'
+import { WS_EVENT_NAME } from '../../src/constant'
 
-const RECONNECT_INTERVAL = 2000
+export const wsConnecting = ref(false)
+export const wsError = shallowRef<any>()
+export const wsConnectingDebounced = useDebounce(wsConnecting, 2000)
 
-export const wsConnecting = ref(true)
-export const wsError = ref<any>()
-
-let connectPromise = connectWS()
-let onMessage: Function = () => {}
+const connectPromise = connectVite()
+let onMessage: any = () => {}
 
 export const clientFunctions = {
   // will be added in app.vue
@@ -16,11 +19,13 @@ export const clientFunctions = {
 
 export const extendedRpcMap = new Map<string, any>()
 
-export const rpc = createBirpc<ServerFunctions>(clientFunctions, {
+export const rpc = createBirpc<ServerFunctions, ClientFunctions>(clientFunctions, {
   post: async (d) => {
-    (await connectPromise).send(d)
+    (await connectPromise).send(WS_EVENT_NAME, d)
   },
-  on: (fn) => { onMessage = fn },
+  on: (fn) => {
+    onMessage = fn
+  },
   serialize: stringify,
   deserialize: parse,
   resolver(name, fn) {
@@ -34,35 +39,42 @@ export const rpc = createBirpc<ServerFunctions>(clientFunctions, {
   onError(error, name) {
     console.error(`[nuxt-devtools] RPC error on executing "${name}":`, error)
   },
+  timeout: 120_000,
 })
 
-async function connectWS() {
-  const wsUrl = new URL('ws://host/__nuxt_devtools__/entry')
-  wsUrl.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  wsUrl.host = location.host
+async function connectVite() {
+  let base = window.parent?.__NUXT__?.config?.app?.baseURL ?? '/'
+  const buildAssetsDir = window.parent?.__NUXT__?.config?.app.buildAssetsDir.replace(/^\/|\/$/g, '') ?? '_nuxt'
+  if (base && !base.endsWith('/'))
+    base += '/'
+  const current = window.location.href.replace(/\/__nuxt_devtools__\/client\/.*$/, '/')
+  const hot = await tryCreateHotContext(undefined, Array.from(new Set([
+    `${base}${buildAssetsDir}/`,
+    `${base}_nuxt/`,
+    base,
+    `${current}${buildAssetsDir}/`,
+    `${current}_nuxt/`,
+    current,
+  ])))
 
-  const ws = new WebSocket(wsUrl.toString())
-  ws.addEventListener('message', e => onMessage(String(e.data)))
-  ws.addEventListener('error', (e) => {
-    console.error(e)
-    wsError.value = e
-  })
-  ws.addEventListener('close', () => {
-    // eslint-disable-next-line no-console
-    console.log('[nuxt-devtools] WebSocket closed, reconnecting...')
+  if (!hot) {
     wsConnecting.value = true
-    setTimeout(async () => {
-      connectPromise = connectWS()
-    }, RECONNECT_INTERVAL)
+    throw new Error('Unable to connect to devtools')
+  }
+
+  hot.on(WS_EVENT_NAME, (data) => {
+    wsConnecting.value = false
+    onMessage(data)
   })
+
   wsConnecting.value = true
-  if (ws.readyState !== WebSocket.OPEN)
-    await new Promise(resolve => ws.addEventListener('open', resolve))
 
-  // eslint-disable-next-line no-console
-  console.log('[nuxt-devtools] WebSocket connected.')
-  wsConnecting.value = false
-  wsError.value = null
+  hot.on('vite:ws:connect', () => {
+    wsConnecting.value = false
+  })
+  hot.on('vite:ws:disconnect', () => {
+    wsConnecting.value = true
+  })
 
-  return ws
+  return hot
 }
