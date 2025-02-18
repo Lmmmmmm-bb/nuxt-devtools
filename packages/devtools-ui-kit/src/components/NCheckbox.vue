@@ -3,8 +3,9 @@ import { useVModel } from '@vueuse/core'
 
 const props = withDefaults(
   defineProps<{
-    modelValue?: boolean
-    disabled?: boolean }>(),
+    modelValue?: boolean | null
+    disabled?: boolean
+  }>(),
   {
     modelValue: false,
     disabled: false,
@@ -16,7 +17,7 @@ const checked = useVModel(props, 'modelValue', emit, { passive: true })
 
 <template>
   <label
-    class="hover:n-checkbox-hover n-checkbox select-none items-center n-disabled:n-disabled"
+    class="n-checkbox hover:n-checkbox-hover select-none items-center n-disabled:n-disabled"
     :checked="checked || null"
     :disabled="disabled || null"
   >

@@ -1,72 +1,76 @@
-import { createApp, h, markRaw } from 'vue'
+import type { TimelineServerState } from '@nuxt/devtools/types'
 
-import type { Nuxt } from 'nuxt/schema'
+import type { Router } from 'vue-router'
+// eslint-disable-next-line ts/ban-ts-comment
+// @ts-ignore tsconfig
+import { defineNuxtPlugin, useRouter, useState } from '#imports'
+
+import { shallowReactive, watchEffect } from 'vue'
 import { setupHooksDebug } from '../shared/hooks'
-import type { NuxtDevtoolsHostClient } from '../../types'
 
-// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-// @ts-ignore tsconfig
-import { defineNuxtPlugin } from '#app'
-
-// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-// @ts-ignore tsconfig
-import { useAppConfig } from '#imports'
-
-export default defineNuxtPlugin((nuxt: Nuxt) => {
-  // TODO: Stackblitz support?
+export default defineNuxtPlugin((nuxt: any) => {
   if (typeof document === 'undefined' || typeof window === 'undefined')
     return
 
-  if (window.parent && window.self !== window.parent) {
-    try {
-      if (window.parent.__NUXT_DEVTOOLS_VIEW__ || window.parent.document.querySelector('#nuxt-devtools-container'))
+  try {
+    if (window.__NUXT_DEVTOOLS_DISABLE__ || window.parent?.__NUXT_DEVTOOLS_DISABLE__)
+      return
+
+    if (parent && window.self !== parent) {
+      if (parent.__NUXT_DEVTOOLS_VIEW__ || parent.document.querySelector('#nuxt-devtools-container'))
         return
     }
-    catch (e) {
-    }
   }
+  catch (e) {
+    console.error('Nuxt DevTools: Failed to check parent window')
+    console.error(e)
+  }
+
+  const timeMetric = shallowReactive(window.__NUXT_DEVTOOLS_TIME_METRIC__ || {})
+  Object.defineProperty(window, '__NUXT_DEVTOOLS_TIME_METRIC__', {
+    value: timeMetric,
+    enumerable: false,
+    configurable: true,
+  })
+  timeMetric.pluginInit = Date.now()
 
   const clientHooks = setupHooksDebug(nuxt.hooks)
+  const router = useRouter() as Router
 
-  async function init() {
-    const { closePanel, togglePanel } = await import('./view/state')
-    const { createHooks } = await import('hookable')
-    const { default: Container } = await import('./view/Container.vue')
+  nuxt.hook('app:mounted', () => {
+    timeMetric.appLoad = Date.now()
+  })
+  router.beforeEach(() => {
+    timeMetric.pageStart = Date.now()
+  })
+  nuxt.hook('page:finish', () => {
+    timeMetric.pageEnd = Date.now()
+  })
 
-    const client: NuxtDevtoolsHostClient = markRaw({
-      nuxt: markRaw(nuxt as any),
-      appConfig: useAppConfig() as any,
-      hooks: createHooks(),
-      getClientHooksMetrics: () => Object.values(clientHooks),
-      getClientPluginMetrics: () => {
-      // @ts-expect-error injected
-        return globalThis.__NUXT_DEVTOOLS_PLUGINS_METRIC__ || []
-      },
-      reloadPage() {
-        location.reload()
-      },
-      closeDevTools: closePanel,
+  const ssrState = useState<TimelineServerState>('__nuxt_devtools__', () => ({}))
+
+  watchEffect(() => {
+    if (ssrState.value.timeSsrStart)
+      timeMetric.ssrStart = ssrState.value.timeSsrStart
+  })
+
+  import('./view/client')
+    .then(async ({ setupDevToolsClient }) => {
+      await setupDevToolsClient({
+        nuxt,
+        clientHooks,
+        timeMetric,
+        router,
+      })
+
+      const isMac = typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac')
+
+      // eslint-disable-next-line no-console
+      console.log(
+        `✨ %cNuxt DevTools %c Press Shift + ${isMac ? 'Option' : 'Alt'} + D to open DevTools`,
+        'color: black; border-radius: 3px 0 0 3px; padding: 2px 2px 1px 10px; background: #00DC82',
+        'border-radius: 0 3px 3px 0; padding: 2px 10px 1px 2px; background: #00DC8220',
+        '',
+      )
     })
-
-    const holder = document.createElement('div')
-    holder.id = 'nuxt-devtools-container'
-    holder.setAttribute('data-v-inspector-ignore', 'true')
-    document.body.appendChild(holder)
-
-    // Shortcut to toggle devtools
-    addEventListener('keydown', (e) => {
-      if (e.code === 'KeyD' && e.altKey && e.shiftKey)
-        togglePanel()
-    })
-
-    const app = createApp({
-      render: () => h(Container, { client }),
-      devtools: {
-        hide: true,
-      },
-    })
-    app.mount(holder)
-  }
-
-  setTimeout(init, 1)
 })

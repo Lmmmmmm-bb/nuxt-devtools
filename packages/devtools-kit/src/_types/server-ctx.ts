@@ -1,7 +1,7 @@
 import type { BirpcGroup } from 'birpc'
 import type { Nuxt } from 'nuxt/schema'
+import type { ModuleOptions } from './options'
 import type { ClientFunctions, ServerFunctions } from './rpc'
-import type { ModuleOptions } from './module-options'
 
 /**
  * @internal
@@ -22,11 +22,23 @@ export interface NuxtDevtoolsServerContext {
    */
   refresh: (event: keyof ServerFunctions) => void
 
-  extendServerRpc: <ClientFunctions = {}, ServerFunctions = {}>(name: string, functions: ServerFunctions) => BirpcGroup<ClientFunctions, ServerFunctions>
+  /**
+   * Ensure dev auth token is valid, throw if not
+   */
+  ensureDevAuthToken: (token: string) => Promise<void>
+
+  extendServerRpc: <ClientFunctions = Record<string, never>, ServerFunctions = Record<string, never>>(name: string, functions: ServerFunctions) => BirpcGroup<ClientFunctions, ServerFunctions>
 }
 
 export interface NuxtDevtoolsInfo {
   version: string
   packagePath: string
   isGlobalInstall: boolean
+}
+
+export interface InstallModuleReturn {
+  configOriginal: string
+  configGenerated: string
+  commands: string[]
+  processId: string
 }

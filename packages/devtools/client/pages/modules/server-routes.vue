@@ -1,20 +1,46 @@
 <script setup lang="ts">
+import type { ServerRouteInfo } from '~/../../src/types'
+import { definePageMeta } from '#imports'
 import Fuse from 'fuse.js'
+import { computed, ref } from 'vue'
+import { ServerRouteTabIcons } from '~/composables/constants'
+import { useServerRoutes } from '~/composables/state'
+import { useCurrentServeRoute } from '~/composables/state-routes'
+import { useDevToolsOptions } from '~/composables/storage-options'
 
 definePageMeta({
   icon: 'carbon-cloud',
   title: 'Server Routes',
   layout: 'full',
-  experimental: true,
   category: 'server',
   show() {
-    return useServerRoutes().value?.length
+    const routes = useServerRoutes()
+    return () => routes.value?.length
   },
 })
 
-const vueRoute = useRoute()
+const inputDefaultsDrawer = ref(false)
 
 const serverRoutes = useServerRoutes()
+const currentServerRoute = useCurrentServeRoute()
+
+const { selectedRoute, view, inputDefaults } = useDevToolsOptions('serverRoutes')
+
+const selected = computed(() => {
+  if (!currentServerRoute.value && selectedRoute.value)
+    // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+    currentServerRoute.value = selectedRoute.value.filepath
+
+  const route = serverRoutes.value?.find(i => i.filepath === currentServerRoute.value)
+
+  if (currentServerRoute.value !== selectedRoute.value?.filepath && route)
+    // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+    selectedRoute.value = route
+
+  return route
+})
+
+const search = ref('')
 const fuse = computed(() => new Fuse(serverRoutes.value || [], {
   keys: [
     'method',
@@ -23,52 +49,130 @@ const fuse = computed(() => new Fuse(serverRoutes.value || [], {
   shouldSort: true,
 }))
 
-const selected = computed(() => serverRoutes.value?.find(i => i.path === vueRoute.query?.path))
-const search = ref('')
-
 const filtered = computed(() => {
-  if (!serverRoutes.value)
-    return []
-  if (!search.value)
-    return serverRoutes.value
-  return fuse.value.search(search.value).map(i => i.item)
+  const result = !serverRoutes.value
+    ? []
+    : !search.value
+        ? serverRoutes.value
+        : fuse.value.search(search.value).map(i => i.item)
+  return result
 })
+
+const filterByCollection = computed(() => {
+  const collections: ServerRouteInfo[] = []
+
+  const addRouteToCollection = (collection: ServerRouteInfo, route: ServerRouteInfo) => {
+    collection.routes = collection.routes || []
+    collection.routes.push(route)
+  }
+
+  const findOrCreateCollection = (routeName: string, parentCollection?: ServerRouteInfo) => {
+    const existingCollection = parentCollection
+      ? parentCollection.routes?.find(r => r.route === routeName)
+      : collections.find(c => c.route === routeName)
+
+    if (existingCollection)
+      return existingCollection
+
+    const newCollection: ServerRouteInfo = {
+      route: routeName,
+      filepath: routeName.replace(/\W/g, '-').toLowerCase(),
+      type: 'collection',
+      routes: [],
+    }
+
+    if (parentCollection)
+      addRouteToCollection(parentCollection, newCollection)
+
+    else
+      collections.push(newCollection)
+
+    return newCollection
+  }
+
+  filtered.value.forEach((item) => {
+    let prefix: string | undefined
+    let parentCollection: ServerRouteInfo | undefined
+
+    const filepathParts = item.filepath.split('/')
+    const collectionNames = filepathParts.slice(filepathParts.indexOf('server') + 1)
+
+    if (item.type === 'runtime') {
+      collectionNames[0] = 'runtime'
+      const indexOfDist = filepathParts.indexOf('dist')
+      if (indexOfDist !== -1) {
+        prefix = filepathParts[indexOfDist - 1]
+        if (prefix)
+          collectionNames.splice(1, 0, prefix)
+      }
+    }
+
+    if (collectionNames.length > 0 && collectionNames[collectionNames.length - 1].includes('.'))
+      collectionNames.pop()
+
+    collectionNames.forEach((collectionName) => {
+      parentCollection = findOrCreateCollection(collectionName, parentCollection)
+    })
+
+    if (parentCollection)
+      addRouteToCollection(parentCollection, item)
+    else
+      collections.push(item)
+  })
+
+  return collections
+})
+
+function toggleView() {
+  view.value = view.value === 'tree' ? 'list' : 'tree'
+}
+
+function capitalize(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
 </script>
 
 <template>
-  <PanelLeftRight>
+  <NSplitPane storage-key="tab-server-routes">
     <template #left>
-      <Navbar v-model:search="search" pb2>
-        <div flex="~ gap1" text-sm op50>
-          <span v-if="search">{{ filtered.length }} matched · </span>
-          <span>{{ serverRoutes?.length }} routes in total</span>
+      <NNavbar v-model:search="search" pb2>
+        <template #actions>
+          <NButton
+            v-tooltip="'Toggle View'"
+            text-lg
+            :icon="view === 'list' ? 'i-carbon-list' : 'i-carbon-tree-view-alt'"
+            title="Toggle view"
+            :border="false"
+            @click="toggleView"
+          />
+          <NButton
+            v-tooltip="'Default Inputs'"
+            text-lg
+            icon="i-carbon-cics-sit-overrides"
+            title="Default Inputs"
+            :border="false"
+            @click="inputDefaultsDrawer = !inputDefaultsDrawer"
+          />
+        </template>
+        <div flex="~ gap1" text-sm>
+          <span v-if="search" op50>{{ filtered.length }} matched · </span>
+          <span op50>{{ serverRoutes?.length }} routes in total</span>
         </div>
-      </Navbar>
+      </NNavbar>
 
-      <template v-for="item of filtered" :key="item.id">
-        <NuxtLink
-          flex="~ gap-2" items-center hover-bg-active px2 py1
-          :class="[{ 'bg-active': selected?.path === item.path }]"
-          :to="{ query: { path: item.path } }"
-        >
-          <div w-12 flex-none text-right>
-            <Badge
-              :class="getRequestMethodClass(item.method || '*')"
-              title="updates available"
-              v-text="(item.method || '*').toUpperCase()"
-            />
-          </div>
-          <span font-mono text-sm>{{ item.route }}</span>
-        </NuxtLink>
-        <div x-divider />
-      </template>
+      <ServerRouteListItem
+        v-for="item in view === 'tree' ? filterByCollection : filtered"
+        :key="item.filepath"
+        :item="item"
+      />
     </template>
     <template #right>
       <KeepAlive :max="10">
         <ServerRouteDetails
           v-if="selected"
-          :key="selected.path"
+          :key="selected.filepath"
           :route="selected"
+          @open-default-input="inputDefaultsDrawer = true"
         />
       </KeepAlive>
       <NPanelGrids v-if="!selected">
@@ -77,5 +181,23 @@ const filtered = computed(() => {
         </NCard>
       </NPanelGrids>
     </template>
-  </PanelLeftRight>
+  </NSplitPane>
+  <NDrawer v-model="inputDefaultsDrawer" auto-close max-w-xl min-w-xl @close="inputDefaultsDrawer = false">
+    <div>
+      <div p4 border="b base">
+        <span text-lg>Default Inputs</span>
+        <br>
+        <span text-white op50>Merged as default for every request in DevTools</span>
+      </div>
+      <NSectionBlock
+        v-for="tab of Object.keys(inputDefaults)"
+        :key="tab"
+        :text="`${capitalize(tab)} ${inputDefaults[tab].length ? `(${inputDefaults[tab].length})` : ''}`"
+        :padding="false"
+        :icon="ServerRouteTabIcons[tab]"
+      >
+        <ServerRouteInputs v-model="inputDefaults[tab]" py0 :default="{ active: true, type: 'string' }" />
+      </NSectionBlock>
+    </div>
+  </NDrawer>
 </template>

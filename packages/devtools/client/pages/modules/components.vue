@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { useComponents } from '~/composables/state'
+import { definePageMeta } from '#imports'
 import ComponentsGraph from '~/components/ComponentsGraph.vue'
 import ComponentsList from '~/components/ComponentsList.vue'
+import { useClient } from '~/composables/client'
+import { useComponents, useComponentsRelationships } from '~/composables/state-components'
+import { useDevToolsOptions } from '../../composables/storage-options'
 
 definePageMeta({
   icon: 'i-carbon-assembly-cluster',
@@ -10,18 +13,15 @@ definePageMeta({
 })
 
 const client = useClient()
-const router = useRouter()
 const components = useComponents()
+const relationships = useComponentsRelationships()
 
-const {
-  componentsView: view,
-} = useDevToolsSettings()
+const { componentsView: view } = useDevToolsOptions('ui')
 
 function openComponentInspector() {
   if (!client.value?.inspector?.instance)
     return
   client.value.inspector.enable()
-  router.push('/__inspecting')
 }
 
 function toggleView() {
@@ -34,23 +34,24 @@ function toggleView() {
     <component
       :is="view === 'list' ? ComponentsList : ComponentsGraph"
       :components="components"
+      :relationships="relationships"
     >
-      <div flex-none flex="~ gap4">
-        <!-- TODO: Use NIconButton -->
-        <button
+      <div flex-none flex="~ gap3">
+        <NButton
+          v-tooltip.bottom-end="'Toggle View'"
+          text-lg :border="false"
+          :icon="view === 'graph' ? 'i-carbon-list' : 'i-carbon-network-4'"
           title="Toggle view"
           @click="toggleView"
-        >
-          <NIcon v-if="view === 'graph'" icon="i-carbon-list" />
-          <NIcon v-else icon="i-carbon-network-4" />
-        </button>
-        <button
+        />
+        <NButton
           v-if="client?.inspector?.instance"
+          v-tooltip.bottom-end="'Inspect Vue components'"
+          text-lg :border="false"
+          icon="i-tabler-focus-2"
           title="Inspect Vue components"
           @click="openComponentInspector"
-        >
-          <NIcon icon="i-carbon-select-window" />
-        </button>
+        />
       </div>
     </component>
   </div>

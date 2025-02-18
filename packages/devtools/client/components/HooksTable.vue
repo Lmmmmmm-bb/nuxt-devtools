@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HookInfo } from '~/../src/types'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   hooks: HookInfo[]
@@ -11,7 +12,7 @@ const sortby = ref<SortBy>('duration')
 const direction = ref<'asc' | 'desc'>('asc')
 
 const sortFunctions = {
-  duration: (a: HookInfo, b: HookInfo) => (b.duration ?? Infinity) - (a.duration ?? Infinity),
+  duration: (a: HookInfo, b: HookInfo) => (b.duration ?? Number.POSITIVE_INFINITY) - (a.duration ?? Number.POSITIVE_INFINITY),
   name: (a: HookInfo, b: HookInfo) => a.name.localeCompare(b.name),
   listener: (a: HookInfo, b: HookInfo) => b.listeners - a.listeners,
   start: (a: HookInfo, b: HookInfo) => b.start - a.start,
@@ -40,14 +41,6 @@ function getNameRest(name: string) {
   if (parts.length === 1)
     return name
   return parts.slice(1).join(':')
-}
-
-function getHashColorFromString(name: string) {
-  let hash = 0
-  for (let i = 0; i < name.length; i++)
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  const h = hash % 360
-  return `hsl(${h}, 65%, 50%)`
 }
 
 function toggleSortedBy(by: SortBy) {

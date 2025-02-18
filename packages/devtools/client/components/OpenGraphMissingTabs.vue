@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { defu } from 'defu'
+import type { MetaFlatInput } from '@unhead/schema'
 import type { ReactiveHead } from '@unhead/vue'
 import type { NormalizedHeadTag } from '../../src/types'
+import { defu } from 'defu'
+import { computed, ref } from 'vue'
+import { useCopy, useOpenInEditor } from '~/composables/editor'
 import { ogTags } from '../data/open-graph'
 
 const props = defineProps<{
@@ -13,27 +16,36 @@ const missingTags = computed(() => {
   return ogTags.filter(define => !props.tags?.some(tag => tag.name === define.name))
 })
 
-const missingRequiredTags = computed(() => {
-  return missingTags.value.filter(i => i.suggestion === 'required')
-})
-const missingRecommendedTags = computed(() => {
-  return missingTags.value.filter(i => i.suggestion === 'recommended')
-})
-
-const mergedMissingTags = computed(() => {
-  let data: Partial<ReactiveHead> = {}
+const codeSnippet = computed(() => {
+  let mergedHeadOptions: Partial<ReactiveHead> = {}
+  const mergedSeoMetaOptions: Partial<MetaFlatInput> = {}
   missingTags.value
     .forEach((tag) => {
-      data = defu(data, tag.default)
+      if (tag.seoMeta)
+        Object.assign(mergedSeoMetaOptions, tag.seoMeta)
+      else
+        mergedHeadOptions = defu(mergedHeadOptions, tag.head)
     })
-  return data
-})
 
-const codeSnippet = computed(() => {
-  const body = JSON.stringify(mergedMissingTags.value, null, 2)
-    .replace(/"([^"]+)":/g, '$1:')
-    .replace(/"/g, '\'')
-  return `useHead(${body})`
+  const lines = []
+
+  if (Object.keys(mergedSeoMetaOptions).length) {
+    const body = JSON.stringify(mergedSeoMetaOptions, null, 2)
+      .replace(/"([^"]+)":/g, '$1:')
+      .replace(/"/g, '\'')
+
+    lines.push(`useSeoMeta(${body})`)
+  }
+
+  if (Object.keys(mergedHeadOptions).length) {
+    const body = JSON.stringify(mergedHeadOptions, null, 2)
+      .replace(/"([^"]+)":/g, '$1:')
+      .replace(/"/g, '\'')
+
+    lines.push(`useHead(${body})`)
+  }
+
+  return lines.join('\n\n')
 })
 
 const copy = useCopy()
@@ -50,7 +62,7 @@ const selectedTab = ref(tabs[0])
   <template v-if="missingTags.length">
     <NSectionBlock
       text="Missing Tags"
-      :description="`${missingTags.length} missing tags (${missingRequiredTags.length} required, ${missingRecommendedTags.length} recommended)`"
+      :description="`${missingTags.length} missing tags`"
       icon="carbon:warning-other"
       header-class="text-orange op100! [[open]_&]:text-inherit"
       :padding="false"
@@ -71,21 +83,24 @@ const selectedTab = ref(tabs[0])
         <div border="b base" flex-auto />
       </div>
 
-      <NCard v-if="selectedTab === tabs[0]" grid="~ cols-[max-content_1fr]" m4 items-center justify-between of-hidden>
+      <NCard
+        v-if="selectedTab === tabs[0]"
+        grid="~ cols-[1fr] lg:cols-[max-content_1fr]" m4 items-center justify-between of-hidden
+      >
         <template v-for="item, index of missingTags" :key="index">
           <div v-if="index" x-divider />
           <div v-if="index" x-divider />
-          <div flex="~ gap-1 items-center" px4 py2>
+          <div flex="~ gap-1 items-center" class="px2 pt2" lg="px4 py2">
             <div i-carbon-warning text-orange />
-            <NTextExternalLink
-              op50
-              :link="item.docs"
+            <NLink
+              op-50
+              :href="item.docs"
+              target="_blank"
               n="orange"
             >
               {{ item.name }}
-            </NTextExternalLink>
+            </NLink>
           </div>
-          <!-- TODO: use icons instead, show link to documentation -->
           <div w-full p2 op75>
             {{ item.description }}
           </div>
@@ -95,7 +110,7 @@ const selectedTab = ref(tabs[0])
         <p flex="~ gap-1 wrap items-center">
           <NButton
             icon="carbon-copy" n="xs" px-2
-            @click="copy(codeSnippet)"
+            @click="copy(codeSnippet, 'open-graph-suggestion')"
           >
             Copy
           </NButton>
@@ -120,7 +135,7 @@ const selectedTab = ref(tabs[0])
           <div flex="~ gap-2" n="sm primary" absolute right-2 top-2>
             <NButton
               icon="carbon-copy"
-              @click="copy(codeSnippet)"
+              @click="copy(codeSnippet, 'open-graph-suggestion')"
             >
               Copy
             </NButton>

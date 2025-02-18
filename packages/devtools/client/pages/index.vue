@@ -1,35 +1,64 @@
 <script setup lang="ts">
+import { definePageMeta } from '#imports'
+import { ref } from 'vue'
+import { useClient } from '~/composables/client'
+import { isFirstVisit } from '~/composables/storage'
+import { useDevToolsOptions } from '~/composables/storage-options'
+import { telemetryEnabled } from '~/composables/telemetry'
+
 definePageMeta({
   layout: 'none',
 })
 
+const client = useClient()
+const telemetryModel = ref(true)
+
+const {
+  showPanel,
+} = useDevToolsOptions('ui')
+
 function visit() {
+  telemetryEnabled.value = telemetryModel.value
   isFirstVisit.value = false
+}
+
+function hideFloatingPanel() {
+  showPanel.value = false
+  client.value.devtools.close()
 }
 </script>
 
 <template>
-  <div flex="~ col gap4" mxa h-screen w-160 items-center justify-center text-center>
-    <div flex="~" items-center justify-center>
-      <NuxtLogo h-16 />
-      <Badge
-        mr--15 mt--5 bg-green-400:10 text-green-400
-        title="preview"
-        v-text="'preview'"
-      />
-    </div>
-    <p my2 text-xl font-bold>
-      👋 Welcome trying the preview of Nuxt DevTools!
-    </p>
-    <p text-lg>
-      <b font-bold>Nuxt DevTools</b> is a set of visual tools that help you to know your app/site better, and enhance your development experience with Nuxt.
-    </p>
-    <p text-lg>
-      Be aware that <span rounded bg-orange:10 px2 py0.5 font-bold text-orange>Nuxt DevTools is still in early preview</span>, features might be incomplete and unstable. <a href="https://github.com/nuxt/devtools" target="_blank" text-primary hover-underline>Create an issue or discussion</a> if you find any bugs or have any suggestions. Thank you and have fun!
-    </p>
+  <NPanelGrids flex="~ col" relative h-screen w-full>
+    <div flex="~ auto col gap3" items-center justify-center text-center>
+      <p my2 text-3em text-primary font-bold font-stylish>
+        👋 Hi there, welcome to Nuxt DevTools!
+      </p>
+      <p max-w-190 text-lg>
+        <NuxtLogo mr-0.5 inline-block h-5 translate-y--1.1 align-mid /> is a set of visual tools that help you to know your Nuxt app better, and enhance your
+        development experience with Nuxt. Enjoy!<br>
+      </p>
+      <p mb6 op50>
+        Learn more at
+        <NLink href="https://devtools.nuxt.com/" target="_blank" rel="noopener noreferrer" n="primary">
+          devtools.nuxt.com
+        </NLink>
+      </p>
 
-    <NButton to="/modules/overview" mt-4 n="xl primary" @click="visit">
-      <span>Get Started</span>
-    </NButton>
-  </div>
+      <NButton to="/modules/overview" n="lg primary" @click="visit">
+        <span>Get Started</span>
+      </NButton>
+      <NButton v-if="showPanel !== false" n="borderless orange" @click="hideFloatingPanel">
+        <span>Always hide the floating panel</span>
+      </NButton>
+    </div>
+    <div p4>
+      <div flex="~ col gap-2" mxa>
+        <NCheckbox v-model="telemetryModel" n="green6">
+          <span op50>Send anonymous statistics, help us improving DevTools</span>
+          <NLink href="https://github.com/nuxt/devtools#anonymous-usage-analytics" target="_blank" ml1 op35 v-text="'Learn more'" />
+        </NCheckbox>
+      </div>
+    </div>
+  </NPanelGrids>
 </template>

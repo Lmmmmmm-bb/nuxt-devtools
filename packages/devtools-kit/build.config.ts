@@ -4,7 +4,7 @@ export default defineBuildConfig({
   entries: [
     'src/index',
     'src/types',
-    'src/iframe-client',
+    { input: 'src/runtime/', outDir: 'dist/runtime', format: 'esm' },
   ],
   externals: [
     '@nuxt/kit',
@@ -16,11 +16,15 @@ export default defineBuildConfig({
     'nitropack',
     'unimport',
     'unstorage',
+    'ofetch',
     'vue',
     'vue-router',
     'nuxt/dist/app/nuxt',
     'birpc',
     'hookable',
+    'vite-plugin-vue-inspector',
+    'error-stack-parser-es',
+    'shiki',
   ],
   declaration: true,
   rollup: {

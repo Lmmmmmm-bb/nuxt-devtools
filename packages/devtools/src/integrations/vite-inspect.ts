@@ -1,11 +1,15 @@
-import { addVitePlugin } from '@nuxt/kit'
-import type { ViteInspectAPI } from 'vite-plugin-inspect'
-import Inspect from 'vite-plugin-inspect'
-import { addCustomTab } from '@nuxt/devtools-kit'
+import type { Plugin } from 'vite'
+import type { ViteInspectAPI, ViteInspectOptions } from 'vite-plugin-inspect'
 import type { NuxtDevtoolsServerContext } from '../types'
+import { addCustomTab } from '@nuxt/devtools-kit'
+import { addVitePlugin } from '@nuxt/kit'
+
+export async function createVitePluginInspect(options?: ViteInspectOptions): Promise<Plugin> {
+  return await import('vite-plugin-inspect').then(r => r.default(options))
+}
 
 export async function setup({ nuxt, rpc }: NuxtDevtoolsServerContext) {
-  const plugin = Inspect()
+  const plugin = await createVitePluginInspect()
   addVitePlugin(plugin)
 
   let api: ViteInspectAPI | undefined
@@ -21,13 +25,28 @@ export async function setup({ nuxt, rpc }: NuxtDevtoolsServerContext) {
     category: 'advanced',
     view: {
       type: 'iframe',
-      src: `${nuxt.options.app.baseURL}/_nuxt/__inspect/`.replace(/\/\//g, '/'),
+      src: `${nuxt.options.app.baseURL}${nuxt.options.app.buildAssetsDir}/__inspect/`.replace(/\/\//g, '/'),
     },
   }), nuxt)
 
   async function getComponentsRelationships() {
-    const modules = (await api?.rpc.list())?.modules || []
-    const vueModules = modules.filter(i => i.id.match(/\.vue($|\?v=)/))
+    const meta = await api?.rpc.getMetadata()
+    const modules = (
+      meta
+        ? await api?.rpc.getModulesList({
+          vite: meta?.instances[0].vite,
+          env: meta?.instances[0].environments[0],
+        })
+        : null
+    ) || []
+
+    const components = await rpc.functions.getComponents() || []
+    const vueModules = modules.filter((m) => {
+      const plainId = m.id.replace(/\?v=\w+$/, '')
+      if (components.some(c => c.filePath === plainId))
+        return true
+      return m.id.match(/\.vue($|\?v=)/)
+    })
 
     const graph = vueModules.map((i) => {
       function searchForVueDeps(id: string, seen = new Set<string>()): string[] {

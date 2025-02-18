@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { addComponentsDir, createResolver, defineNuxtModule, installModule } from '@nuxt/kit'
+import { addComponentsDir, addImportsDir, createResolver, defineNuxtModule, installModule } from '@nuxt/kit'
 import defu from 'defu'
 import { extendUnocssOptions } from './unocss'
 
@@ -24,6 +24,9 @@ export default defineNuxtModule<ModuleOptions>({
     dev: false,
   },
   async setup(options, nuxt) {
+    // composables
+    addImportsDir(rPath('./composables'))
+
     // Standard components
     addComponentsDir({ path: rPath('./components') })
 
@@ -32,15 +35,16 @@ export default defineNuxtModule<ModuleOptions>({
     if (!options.dev)
       nuxt.options.unocss = extendUnocssOptions(nuxt.options.unocss)
 
-    // @ts-expect-error - module options
+    // eslint-disable-next-line ts/ban-ts-comment
+    // @ts-ignore - module options
     nuxt.options.vueuse = nuxt.options.vueuse || {}
-    // @ts-expect-error - module options
+    // eslint-disable-next-line ts/ban-ts-comment
+    // @ts-ignore - module options
     nuxt.options.colorMode = defu(nuxt.options.colorMode, { classSuffix: '' })
 
     const resolver = createResolver(import.meta.url)
     await installModule(await resolver.resolvePath('@unocss/nuxt'))
     await installModule(await resolver.resolvePath('@vueuse/nuxt'))
-    await installModule(await resolver.resolvePath('@nuxtjs/color-mode'))
     await installModule(await resolver.resolvePath('v-lazy-show/nuxt'))
   },
 })

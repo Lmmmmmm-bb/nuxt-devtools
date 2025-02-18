@@ -1,29 +1,17 @@
-import type { Highlighter, Lang } from 'shiki-es'
-import { getHighlighter } from 'shiki-es'
+import type { BundledLanguage, BundledTheme, Highlighter } from './shiki.bundle'
+import { shallowRef } from 'vue'
+import { bundledLanguages, bundledThemes, createHighlighter } from './shiki.bundle'
 
-export const shiki = ref<Highlighter>()
+export const shiki = shallowRef<Highlighter>()
 
 let promise: Promise<any> | null = null
 
-export function renderCodeHighlight(code: string, lang: Lang) {
-  const mode = useColorMode()
-
+export function renderCodeHighlight(code: string, lang: BundledLanguage | 'text' = 'text') {
   if (!promise && !shiki.value) {
     // Only loading when needed
-    promise = getHighlighter({
-      themes: [
-        'vitesse-dark',
-        'vitesse-light',
-      ],
-      langs: [
-        'css',
-        'javascript',
-        'typescript',
-        'html',
-        'vue',
-        'vue-html',
-        'bash',
-      ],
+    promise = createHighlighter({
+      langs: Object.keys(bundledLanguages) as BundledLanguage[],
+      themes: Object.keys(bundledThemes) as BundledTheme[],
     }).then((i) => {
       shiki.value = i
     })
@@ -40,7 +28,21 @@ export function renderCodeHighlight(code: string, lang: Lang) {
   return {
     code: shiki.value!.codeToHtml(code, {
       lang,
-      theme: mode.value === 'dark' ? 'vitesse-dark' : 'vitesse-light',
+      themes: {
+        dark: 'vitesse-dark',
+        light: 'vitesse-light',
+      },
+      transformers: [
+        {
+          root(hast) {
+            return {
+              type: 'root',
+              // @ts-expect-error hast casting
+              children: hast.children[0].children[0].children,
+            }
+          },
+        },
+      ],
     }),
     supported: true,
   }

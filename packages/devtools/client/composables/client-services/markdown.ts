@@ -1,6 +1,7 @@
 import type MarkdownIt from 'markdown-it'
+import { shallowRef } from 'vue'
 
-const md = ref<MarkdownIt>()
+const md = shallowRef<MarkdownIt>()
 
 let promise: Promise<void> | undefined
 

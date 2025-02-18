@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { PluginInfoWithMetic } from '@nuxt/devtools-kit/types'
+import { computed } from 'vue'
+import { useServerConfig } from '~/composables/state'
+import { parseReadablePath } from '~/composables/utils'
 
 const props = defineProps<{
   plugin: PluginInfoWithMetic
@@ -15,29 +18,31 @@ const shortPath = computed(() => parseReadablePath(props.plugin.src, config.valu
     <div w8 text-right text-sm op25>
       {{ index }}
     </div>
-    <FilepathItem :filepath="props.plugin.src" :subpath="true" />
-    <div>
-      <Badge
-        v-if="shortPath.startsWith('#')"
-        bg-rose-400:10 text-rose
-        v-text="'virtual'"
-      />
-      <Badge
-        v-else-if="!shortPath.startsWith('.')"
-        bg-gray-400:10 text-gray
-        v-text="'module'"
-      />
-      <Badge
-        v-if="plugin.mode === 'server'"
-        bg-teal-400:10 text-teal-400
-        v-text="'server'"
-      />
-      <Badge
-        v-if="plugin.mode === 'client'"
-        bg-orange-400:10 text-orange-400
-        v-text="'client'"
-      />
-    </div>
+    <FilepathItem :filepath="props.plugin.src" :subpath="true">
+      <div>
+        <NBadge
+          v-if="shortPath.startsWith('#')"
+          n="rose"
+          v-text="'virtual'"
+        />
+        <NBadge
+          v-else-if="!shortPath.startsWith('.')"
+          n="gray"
+          v-text="'module'"
+        />
+        <NBadge
+          v-if="plugin.mode === 'server'"
+          n="teal"
+          v-text="'server'"
+        />
+        <NBadge
+          v-if="plugin.mode === 'client'"
+          n="orange"
+          v-text="'client'"
+        />
+      </div>
+    </FilepathItem>
+
     <div v-if="plugin.metric?.duration != null" flex-auto text-right>
       <DurationDisplay :duration="plugin.metric?.duration" :factor="10" />
     </div>
