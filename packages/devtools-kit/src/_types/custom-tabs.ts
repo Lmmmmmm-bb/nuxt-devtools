@@ -1,4 +1,4 @@
-import type { VNode } from 'vue'
+import type { MaybeRefOrGetter, VNode } from 'vue'
 import type { TabCategory } from './common'
 
 export interface ModuleCustomTab {
@@ -29,6 +29,14 @@ export interface ModuleCustomTab {
    * Advanced options. You don't usually need this.
    */
   extraTabVNode?: VNode
+
+  /**
+   * Require local authentication to access the tab
+   * It's highly recommended to enable this if the tab have sensitive information or have access to the OS
+   *
+   * @default false
+   */
+  requireAuth?: boolean
 }
 
 export interface ModuleLaunchView {
@@ -112,9 +120,11 @@ export interface ModuleBuiltinTab {
   title?: string
   path?: string
   category?: TabCategory
-  show?: () => any
-  badge?: () => number | string | undefined
+  show?: () => MaybeRefOrGetter<any>
+  badge?: () => MaybeRefOrGetter<number | string | undefined>
   onClick?: () => void
 }
 
 export type ModuleTabInfo = ModuleCustomTab | ModuleBuiltinTab
+
+export type CategorizedTabs = [TabCategory, (ModuleCustomTab | ModuleBuiltinTab)[]][]

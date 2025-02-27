@@ -1,0 +1,23 @@
+{
+  "name": "empty",
+  "version": "2.1.0",
+  "private": true,
+  "main": "nuxt.config.ts",
+  "files": [
+    "app.vue",
+    "components",
+    "nuxt.config.ts",
+    "pages",
+    "public"
+  ],
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "nuxt": "catalog:"
+  }
+}

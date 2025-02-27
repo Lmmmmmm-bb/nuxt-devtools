@@ -1,19 +1,28 @@
 <script setup lang="ts">
+import { definePageMeta } from '#imports'
+import { computed } from 'vue'
+import { useClient } from '~/composables/client'
+import { useServerRuntimeConfig } from '~/composables/state'
+
 definePageMeta({
   icon: 'carbon-settings-services',
   title: 'Runtime Configs',
   category: 'analyze',
-  show: () => !!useClient().value,
+  show: () => {
+    const client = useClient()
+    return () => !!client.value
+  },
   order: 6,
 })
 
 const client = useClient()
-const serverConfig = useServerConfig()
+const runtimeConfig = useServerRuntimeConfig()
 const payload = computed(() => client.value?.nuxt.payload)
+const revision = computed(() => client.value?.revision.value)
 
 const privateConfig = computed(() => {
   const clone = {
-    ...serverConfig.value?.runtimeConfig,
+    ...runtimeConfig.value,
   }
   delete clone.public
   delete clone.app
@@ -28,7 +37,10 @@ const privateConfig = computed(() => {
       text="App Config"
       :padding="false"
     >
-      <StateEditor :state="client.appConfig" />
+      <StateEditor
+        :state="client.app.appConfig"
+        :revision="revision"
+      />
     </NSectionBlock>
 
     <NSectionBlock
@@ -36,7 +48,10 @@ const privateConfig = computed(() => {
       text="Public Runtime Config"
       :padding="false"
     >
-      <StateEditor :state="payload.config?.public" />
+      <StateEditor
+        :state="payload.config?.public"
+        :revision="revision"
+      />
     </NSectionBlock>
 
     <NSectionBlock
@@ -46,7 +61,11 @@ const privateConfig = computed(() => {
       :padding="false"
       description="These values are not exposed to the client. Readonly in the DevTools."
     >
-      <StateEditor :state="privateConfig" readonly />
+      <StateEditor
+        :state="privateConfig"
+        :revision="revision"
+        readonly
+      />
     </NSectionBlock>
   </div>
 

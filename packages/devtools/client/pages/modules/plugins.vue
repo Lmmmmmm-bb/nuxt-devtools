@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { PluginInfoWithMetic } from '@nuxt/devtools-kit/types'
+import { definePageMeta } from '#imports'
+import { computed } from 'vue'
+import { useClient } from '~/composables/client'
+import { useServerApp } from '~/composables/state'
 
 definePageMeta({
   icon: 'carbon-plug',
@@ -12,7 +16,7 @@ const client = useClient()
 
 const plugins = computed((): PluginInfoWithMetic[] => {
   const plugins = app.value?.plugins || []
-  const metics = client.value?.getClientPluginMetrics() || []
+  const metics = client.value?.metrics.clientPlugins() || []
 
   return plugins.map((plugin) => {
     const p = typeof plugin === 'string' ? { src: plugin } : plugin
@@ -24,7 +28,7 @@ const plugins = computed((): PluginInfoWithMetic[] => {
 })
 
 const totalTime = computed(() => {
-  const metics = client.value?.getClientPluginMetrics() || []
+  const metics = client.value?.metrics.clientPlugins() || []
   const minStart = Math.min(...metics.map(m => m.start))
   const maxEnd = Math.max(...metics.map(m => m.end))
   return maxEnd - minStart
@@ -46,7 +50,7 @@ const totalTime = computed(() => {
         ml--4 border-base py2 :class="idx ? 'border-t' : ''"
       />
 
-      <div class="text-sm" flex="~ gap-1 items-center justify-end" mt-3>
+      <div class="text-sm" flex="~ gap-1 items-center justify-start" mt-3>
         <div i-carbon-timer text-lg op75 />
         <span op50>Total execution time:</span>
         <DurationDisplay :duration="totalTime" :factor="10" />

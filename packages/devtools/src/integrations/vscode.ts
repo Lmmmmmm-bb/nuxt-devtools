@@ -1,23 +1,44 @@
+import type { CodeServerOptions, CodeServerType, NuxtDevtoolsServerContext } from '../types'
+import { existsSync } from 'node:fs'
+import fs from 'node:fs/promises'
 import { hostname } from 'node:os'
 import { resolve } from 'node:path'
-import fs from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { startSubprocess } from '@nuxt/devtools-kit'
 import { logger } from '@nuxt/kit'
 import { execa } from 'execa'
 import { checkPort, getPort } from 'get-port-please'
 import which from 'which'
-import waitOn from 'wait-on'
-import { startSubprocess } from '@nuxt/devtools-kit'
 import { LOG_PREFIX } from '../logger'
-import type { NuxtDevtoolsServerContext } from '../types'
+
+const codeBinaryOptions: Record<CodeServerType, CodeServerOptions> = {
+  'ms-code-cli': {
+    codeBinary: 'code',
+    launchArg: 'serve-web',
+    licenseTermsArg: '--accept-server-license-terms',
+    connectionTokenArg: '--without-connection-token',
+  },
+  'ms-code-server': {
+    codeBinary: 'code-server',
+    launchArg: 'serve-local',
+    licenseTermsArg: '--accept-server-license-terms',
+    connectionTokenArg: '--without-connection-token',
+  },
+  'coder-code-server': {
+    codeBinary: 'code-server',
+    launchArg: 'serve-local',
+    licenseTermsArg: '',
+    connectionTokenArg: '',
+  },
+}
 
 export async function setup({ nuxt, options, openInEditorHooks, rpc }: NuxtDevtoolsServerContext) {
-  const installed = !!await which('code-server').catch(() => null)
-
   const vsOptions = options?.vscode || {}
-
+  const codeServer: CodeServerType = vsOptions?.codeServer || 'ms-code-server'
+  const { codeBinary, launchArg, licenseTermsArg, connectionTokenArg } = codeBinaryOptions[codeServer]
+  const installed = !!await which(codeBinary).catch(() => null)
   let port = vsOptions?.port || 3080
   let url = `http://localhost:${port}`
+  const host = vsOptions?.host ? `--host=${vsOptions.host}` : '--host=127.0.0.1'
   let loaded = false
   let promise: Promise<void> | null = null
   const mode = vsOptions?.mode || 'local-serve'
@@ -33,13 +54,16 @@ export async function setup({ nuxt, options, openInEditorHooks, rpc }: NuxtDevto
     // we can open files in VS Code Server
     try {
       const { port } = JSON.parse(await fs.readFile(vscodeServerControllerFile, 'utf-8')) as any
-      const url = `http://localhost:${port}/open?path=${encodeURIComponent(file)}`
+      const url = `http://localhost:${port}/open?path=${encodeURIComponent(`${root}/${file}`)}`
       await fetch(url)
       rpc.broadcast.navigateTo('/modules/custom-builtin-vscode')
       return true
     }
     catch (e) {
-      console.error(e)
+      // eslint-disable-next-line no-console
+      console.debug(`Failed to open file "${file}" in VS Code Server`)
+      // eslint-disable-next-line no-console
+      console.debug(e)
       return false
     }
   })
@@ -62,21 +86,20 @@ export async function setup({ nuxt, options, openInEditorHooks, rpc }: NuxtDevto
 
     // Install VS Code Server Controller
     // https://github.com/antfu/vscode-server-controller
-    execa('code-server', [
-      'serve-local',
-      '--accept-server-license-terms',
+    execa(codeBinary, [
       '--install-extension',
       'antfu.vscode-server-controller',
     ], { stderr: 'inherit', stdout: 'ignore', reject: false })
 
     startSubprocess(
       {
-        command: 'code-server',
+        command: codeBinary,
         args: [
-          'serve-local',
-          '--accept-server-license-terms',
-          '--without-connection-token',
+          launchArg,
+          licenseTermsArg,
+          connectionTokenArg,
           `--port=${port}`,
+          host,
         ],
       },
       {
@@ -87,11 +110,11 @@ export async function setup({ nuxt, options, openInEditorHooks, rpc }: NuxtDevto
       nuxt,
     )
 
-    await waitOn({
-      resources: [url],
-      timeout: 20_000,
-      reverse: true,
-    })
+    for (let i = 0; i < 100; i++) {
+      if (await fetch(url).then(r => r.ok).catch(() => false))
+        break
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
 
     await new Promise(resolve => setTimeout(resolve, 2000))
     loaded = true
@@ -118,10 +141,11 @@ export async function setup({ nuxt, options, openInEditorHooks, rpc }: NuxtDevto
       command.kill()
     })
 
-    await waitOn({
-      resources: [url],
-      timeout: 20_000,
-    })
+    for (let i = 0; i < 100; i++) {
+      if (await fetch(url).then(r => r.ok).catch(() => false))
+        break
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
 
     await new Promise(resolve => setTimeout(resolve, 2000))
     loaded = true
@@ -140,7 +164,8 @@ export async function setup({ nuxt, options, openInEditorHooks, rpc }: NuxtDevto
       title: 'VS Code',
       icon: 'bxl-visual-studio',
       category: 'modules',
-      view: !installed
+      requireAuth: true,
+      view: !installed && !(vsOptions?.mode === 'tunnel')
         ? {
             type: 'launch',
             title: 'Install VS Code Server',

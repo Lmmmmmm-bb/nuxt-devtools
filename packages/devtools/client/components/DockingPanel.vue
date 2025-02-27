@@ -1,67 +1,44 @@
 <script setup lang="ts">
-const frameState = useDevToolsFrameState()
+import { splitScreenAvailable, splitScreenEnabled } from '~/composables/storage'
+import { refreshData, reloadPage } from '~/composables/utils'
+import { useDevToolsOptions } from '../composables/storage-options'
 
-const client = useClient()
-const nuxt = useNuxtApp()
+const { sidebarExpanded } = useDevToolsOptions('ui')
 
-function refreshData() {
-  nuxt.hooks.callHookParallel('app:data:refresh', Object.keys(nuxt.payload.data))
-  // TODO: use triggerRef after: https://github.com/vuejs/core/pull/7507
-  // triggerRef(client)
-  if (client.value)
-    client.value = { ...client.value }
-}
-
-function refreshPage() {
-  location.reload()
+function toggleSplitScreen() {
+  splitScreenEnabled.value = !splitScreenEnabled.value
 }
 </script>
 
 <template>
   <div>
-    <div v-if="client" px3 py2 border="b base" flex="~ col gap-1">
-      <div text-sm op50>
-        Dock devtools to
-      </div>
-      <div flex="~ gap-1" text-lg>
-        <button
-          i-carbon-open-panel-filled-bottom
-          :class="frameState.position === 'bottom' ? 'text-primary' : 'op50'"
-          @click="frameState.position = 'bottom'"
-        />
-        <button
-          i-carbon-open-panel-filled-right
-          :class="frameState.position === 'right' ? 'text-primary' : 'op50'"
-          @click="frameState.position = 'right'"
-        />
-        <button
-          i-carbon-open-panel-filled-left
-          :class="frameState.position === 'left' ? 'text-primary' : 'op50'"
-          @click="frameState.position = 'left'"
-        />
-        <button
-          i-carbon-open-panel-filled-top
-          :class="frameState.position === 'top' ? 'text-primary' : 'op50'"
-          @click="frameState.position = 'top'"
-        />
-      </div>
-    </div>
     <div px3 py2 border="b base" flex="~ gap-2">
       <NDarkToggle v-slot="{ toggle, isDark }">
-        <NButton n="sm primary" @click="toggle()">
-          <div carbon-sun dark:carbon-moon translate-y--1px /> {{ isDark.value ? 'Dark' : 'Light' }}
+        <NButton n="sm primary" @click="toggle">
+          <div i-carbon-sun dark:i-carbon-moon translate-y--1px /> {{ isDark.value ? 'Dark' : 'Light' }}
         </NButton>
       </NDarkToggle>
+      <NButton n="sm primary" @click="sidebarExpanded = !sidebarExpanded">
+        <NIcon :icon="sidebarExpanded ? 'i-carbon-side-panel-close' : 'i-carbon-side-panel-open'" />
+        {{ sidebarExpanded ? 'Minimize Sidebar' : 'Expand Sidebar' }}
+      </NButton>
       <NButton n="sm primary" to="/settings">
-        <div carbon-settings-adjust translate-y--1px /> Settings
+        <div i-carbon-settings-adjust /> Settings
       </NButton>
     </div>
+    <div px3 py2 border="b base" flex="~ gap-2">
+      <NButton v-if="splitScreenAvailable" n="sm primary" @click="toggleSplitScreen">
+        <div i-carbon-split-screen />
+        {{ splitScreenEnabled ? 'Close Split Screen' : 'Split Screen' }}
+      </NButton>
+      <PictureInPictureButton />
+    </div>
     <div px3 py2 flex="~ gap2">
-      <NButton n="solid primary xs" @click="refreshData">
+      <NButton n="primary sm" @click="refreshData">
         Refetch Data
       </NButton>
-      <NButton n="solid primary xs" @click="refreshPage">
-        Refresh Page
+      <NButton n="primary sm" @click="reloadPage">
+        Reload Page
       </NButton>
     </div>
   </div>

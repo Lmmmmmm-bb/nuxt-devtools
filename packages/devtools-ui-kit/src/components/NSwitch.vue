@@ -1,22 +1,21 @@
 <script setup lang="ts">
-import { useVModel } from '@vueuse/core'
-
-const props = withDefaults(
+withDefaults(
   defineProps<{
-    modelValue?: boolean
-    disabled?: boolean }>(),
+    disabled?: boolean
+  }>(),
   {
-    modelValue: false,
     disabled: false,
   },
 )
-const emit = defineEmits<{ (...args: any): void }>()
-const checked = useVModel(props, 'modelValue', emit, { passive: true })
+const checked = defineModel('modelValue', {
+  type: Boolean,
+  default: false,
+})
 </script>
 
 <template>
   <label
-    class="n-switch n-switch-base n-disabled:n-disabled"
+    class="n-switch n-switch-base hover:n-switch-hover n-disabled:n-disabled"
     :checked="checked || null"
     :disabled="disabled || null"
   >

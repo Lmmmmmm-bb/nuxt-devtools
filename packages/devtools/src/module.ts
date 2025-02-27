@@ -1,6 +1,6 @@
+import type { ModuleGlobalOptions, ModuleOptions } from './types'
 import { defineNuxtModule } from '@nuxt/kit'
 import { defaultOptions } from './constant'
-import type { ModuleGlobalOptions, ModuleOptions } from './types'
 import { isGlobalInstall } from './dirs'
 
 export type { ModuleOptions }
@@ -12,6 +12,10 @@ export default defineNuxtModule<ModuleOptions>({
   },
   defaults: defaultOptions,
   setup(options, nuxt) {
+    // Disbale in test mode
+    if (process.env.VITEST || process.env.TEST)
+      return
+
     if (typeof options === 'boolean')
       options = { enabled: options }
 

@@ -1,31 +1,51 @@
+import { useRouter } from '#app/composables/router'
+import { devtoolsUiShowNotification } from '#imports'
 import { useClipboard } from '@vueuse/core'
+import { rpc } from './rpc'
+import { useServerConfig, useVirtualFiles } from './state'
+import { useCurrentVirtualFile } from './state-routes'
+import { telemetry } from './telemetry'
 
 export function useOpenInEditor() {
   const config = useServerConfig()
   const virtualFiles = useVirtualFiles()
   const router = useRouter()
+  const virtualFileId = useCurrentVirtualFile()
 
   return async (filepath: string) => {
     const buildDir = config.value?.buildDir
     const path = (buildDir && filepath.startsWith(buildDir))
-      ? `#build${filepath.slice(buildDir.length).replace(/\.\w+$/, '')}`
+      ? `#build${filepath.slice(buildDir.length)}`
       : filepath
 
-    const vfs = virtualFiles.value?.entries.find(i => i.path === path || i.id === path)
-    || virtualFiles.value?.entries.find(i => i.path === filepath || i.id === filepath)
-    if (vfs)
-      router.push(`/modules/virtual-files?id=${encodeURIComponent(vfs.id)}`)
-    else
+    const [realpath, _line = 1, _col = 0] = path.split(/:/g)
+
+    const vfs = virtualFiles.value?.entries.find(i => i.path === realpath || i.id === realpath)
+      || virtualFiles.value?.entries.find(i => i.path === filepath || i.id === filepath)
+    if (vfs) {
+      // TODO: support line and col
+      virtualFileId.value = vfs.id
+      router.push('/modules/virtual-files')
+    }
+    else {
       await rpc.openInEditor(filepath)
+    }
   }
 }
 
 export function useCopy() {
   const clipboard = useClipboard()
-  const showNotification = useNotification()
 
-  return (text: string) => {
+  return (text: string, type?: string) => {
     clipboard.copy(text)
-    showNotification('Copied to clipboard', 'carbon-checkmark')
+
+    telemetry('copy', {
+      copyType: type,
+    })
+
+    devtoolsUiShowNotification({
+      message: 'Copied to clipboard',
+      icon: 'carbon-checkmark',
+    })
   }
 }

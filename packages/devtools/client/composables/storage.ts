@@ -1,31 +1,17 @@
-import { toRefs } from '@vueuse/core'
-import type { DevToolsFrameState, DevToolsUISettings } from '~~/../src/types'
+import type { DevToolsFrameState } from '~~/../src/types'
+import { useLocalStorage, useWindowSize } from '@vueuse/core'
+import { computed } from 'vue'
 
 export const isFirstVisit = useLocalStorage('nuxt-devtools-first-visit', true)
 
-const devToolsSettings = useLocalStorage<DevToolsUISettings>('nuxt-devtools-settings', {
-  componentsView: 'list',
-  componentsGraphShowNodeModules: false,
-  componentsGraphShowPages: false,
-  componentsGraphShowLayouts: false,
-  componentsGraphShowWorkspace: true,
-  interactionCloseOnOutsideClick: false,
-  showExperimentalFeatures: false,
-  showHelpButtons: true,
-  scale: 1,
-  hiddenTabs: [],
-  hiddenTabCategories: [],
-}, { mergeDefaults: true })
+const windowSize = useWindowSize()
 
-const devToolsSettingsRefs = toRefs(devToolsSettings)
+export const splitScreenAvailable = computed(() => windowSize.width.value > 1080)
+export const splitScreenEnabled = useLocalStorage('nuxt-devtools-split-screen', false)
+export const splitScreenView = useLocalStorage('nuxt-devtools-split-screen-view', 'overview')
 
-const devToolsFrameState = useLocalStorage<DevToolsFrameState>('nuxt-devtools-frame-state', {} as any, { listenToStorageChanges: false })
-
+const devToolsFrameState = useLocalStorage<DevToolsFrameState>('nuxt-devtools-frame-state', {} as any, { listenToStorageChanges: true })
 const devToolsPanelsState = useLocalStorage<Record<string, number>>('nuxt-devtools-panels-state', {} as any, { listenToStorageChanges: false })
-
-export function useDevToolsSettings() {
-  return devToolsSettingsRefs
-}
 
 export function useDevToolsFrameState() {
   return devToolsFrameState

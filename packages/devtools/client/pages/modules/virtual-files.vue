@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import Fuse from 'fuse.js'
 import type { VfsFile } from '~/composables/state'
+import { definePageMeta } from '#imports'
+import Fuse from 'fuse.js'
+import { computed, ref, watchEffect } from 'vue'
+import { useVirtualFiles } from '~/composables/state'
+import { useCurrentVirtualFile } from '~/composables/state-routes'
 
 definePageMeta({
   icon: 'i-carbon-border-none',
@@ -13,15 +17,18 @@ const searchString = ref('')
 
 const data = useVirtualFiles()
 
-const fileId = computed(() => useRoute().query?.id as string | undefined)
-
+const fileId = useCurrentVirtualFile()
 const current = ref<VfsFile>()
 
 watchEffect(() => {
   if (!fileId.value)
     return
   const url = `/_vfs.json/${encodeURIComponent(fileId.value)}`
-  fetch(url)
+  fetch(url, {
+    headers: {
+      accept: 'application/json',
+    },
+  })
     .then(i => i.json())
     .then(i => current.value = i.current)
 })
@@ -37,8 +44,8 @@ function toShortPath(path: string) {
 const files = computed(() => {
   if (!data.value)
     return []
-  return data.value.entries
-    // Hide Nuxt dist files, as they are aliased as `#build`
+  return data.value
+    .entries
     .filter(i => !i.id.startsWith(`${data.value?.rootDir || ''}/.nuxt/`))
     .sort((a, b) => a.id.localeCompare(b.id))
 })
@@ -58,22 +65,22 @@ const filteredFiles = computed(() => {
 </script>
 
 <template>
-  <PanelLeftRight class="virtual-files" storage-key="tab-virtual-files">
+  <NSplitPane class="virtual-files" storage-key="tab-virtual-files">
     <template #left>
-      <Navbar
+      <NNavbar
         v-model:search="searchString"
         no-padding p3
       />
       <template
         v-for="f of filteredFiles" :key="f.id"
       >
-        <NuxtLink
-          block select-none truncate px2 py1 font-mono text-sm
-          :to="`/modules/virtual-files?id=${encodeURIComponent(f.id)}`"
+        <button
+          block w-full select-none truncate px2 py1 text-start text-sm font-mono
           :class="f.id === current?.id ? 'text-primary n-bg-active' : 'text-secondary hover:n-bg-hover'"
+          @click="fileId = f.id"
         >
           {{ toShortPath(f.id) }}
-        </NuxtLink>
+        </button>
         <div x-divider />
       </template>
     </template>
@@ -91,7 +98,7 @@ const filteredFiles = computed(() => {
         </NCard>
       </NPanelGrids>
     </template>
-  </PanelLeftRight>
+  </NSplitPane>
 
   <HelpFab>
     <DocsVirtualFiles />

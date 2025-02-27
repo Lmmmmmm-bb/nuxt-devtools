@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { useVModel } from '@vueuse/core'
+import { onClickOutside, useVModel } from '@vueuse/core'
 import { useFocusTrap } from '@vueuse/integrations/useFocusTrap'
+import { computed, nextTick, ref, watchEffect } from 'vue'
 
 const props = withDefaults(
   defineProps<{
     modelValue?: boolean
     dim?: boolean
+    autoClose?: boolean
   }>(),
   {
     modelValue: false,
     dim: true,
+    autoClose: true,
   },
 )
+
 const emit = defineEmits<{
   (event: 'close'): void
   (event: 'update:modelValue', value: boolean): void
@@ -20,22 +23,30 @@ const emit = defineEmits<{
 
 const show = useVModel(props, 'modelValue', emit, { passive: true })
 const card = ref(null)
+const shown = ref(false)
 
-const { activate, deactivate } = useFocusTrap(card, { immediate: false })
+const { activate, deactivate } = useFocusTrap(computed(() => card.value || document.body), { immediate: false })
 
-onMounted(() => {
-  watch(show, (v) => {
-    if (v)
-      activate()
+watchEffect(
+  () => {
+    if (!shown.value && show.value)
+      shown.value = true
+
+    if (show.value && card.value)
+      nextTick(activate)
     else
       deactivate()
-  }, { immediate: true })
-})
+  },
+)
 
-function close() {
-  show.value = false
-  emit('close')
-}
+onClickOutside(card, () => {
+  if (props.modelValue && props.autoClose) {
+    show.value = false
+    emit('close')
+  }
+}, {
+  ignore: ['a', 'button', 'summary'],
+})
 </script>
 
 <script lang="ts">
@@ -45,9 +56,12 @@ export default {
 </script>
 
 <template>
-  <Teleport v-if="show" to="body">
+  <Teleport v-if="shown" to="body">
     <div
-      class="n-dialog fixed inset-0 z-100 flex items-center justify-center n-transition"
+      v-show="show"
+      class="fixed inset-0 z-100 flex items-center justify-center n-transition n-glass-effect"
+      role="dialog"
+      aria-modal="true"
       :class="[
         show ? '' : 'op0 pointer-events-none visibility-none',
       ]"
@@ -55,11 +69,10 @@ export default {
       <div
         class="absolute inset-0 -z-1"
         :class="[
-          dim ? 'bg-black/50' : '',
+          dim ? 'glass-effect' : '',
         ]"
-        @click="close()"
       />
-      <NCard v-bind="$attrs" ref="card">
+      <NCard v-bind="$attrs" ref="card" class="max-h-screen of-auto">
         <slot />
       </NCard>
     </div>

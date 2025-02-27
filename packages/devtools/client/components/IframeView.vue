@@ -1,4 +1,8 @@
 <script lang="ts">
+import { useElementBounding } from '@vueuse/core'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue'
+import { getColorMode, useInjectionClient } from '~/composables/client'
+
 const iframeCacheMap = new Map<string, HTMLIFrameElement>()
 </script>
 
@@ -10,7 +14,7 @@ const props = defineProps<{
   tab: ModuleCustomTab
 }>()
 
-const colorMode = useColorMode()
+const colorMode = getColorMode()
 const anchor = ref<HTMLDivElement>()
 const key = computed(() => props.tab.name)
 const iframeEl = ref<HTMLIFrameElement>()
@@ -28,6 +32,7 @@ onMounted(() => {
   else {
     iframeEl.value = document.createElement('iframe')
     iframeEl.value.setAttribute('allow', allowedPermissions.join('; '))
+    iframeEl.value.setAttribute('aria-label', 'Nuxt Devtools')
 
     if (isPersistent)
       iframeCacheMap.set(key.value, iframeEl.value)
