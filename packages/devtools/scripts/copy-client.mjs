@@ -13,19 +13,20 @@ const TARGET = '../devtools-assets/dist'
 // relative base directly). Rewrite each HTML shell so it works at any mount
 // point:
 //
-// 1. The inline runtime config's `app` object gets a `baseURL` set to a
-//    `location`-derived expression (Nuxt no longer serializes `baseURL` into
-//    the prerendered shell's `window.__NUXT__.config.app` at all — it's read
-//    at runtime, just never populated for a static `ssr:false` generate — so
-//    this injects it rather than rewriting an existing value). The client
-//    uses hash routing in production, so `location.pathname` is always the
-//    mount path (possibly ending in `index.html`, hence stripping the
-//    trailing filename).
+// 1. The inline runtime config's `app` object gets its `baseURL` set to a
+//    `location`-derived expression (any existing `baseURL:"..."` entry —
+//    Nuxt does still serialize the `/__NUXT_DEVTOOLS_BASE__/` placeholder
+//    there for a static `ssr:false` generate — is stripped first, so we
+//    never end up with two `baseURL` keys in the same object literal, where
+//    the last one silently wins). The client uses hash routing in
+//    production, so `location.pathname` is always the mount path (possibly
+//    ending in `index.html`, hence stripping the trailing filename).
 // 2. Every other placeholder occurrence (asset `href`/`src`, importmap)
 //    becomes `./`, relative to the document — which, per 1., is always the
 //    mount root.
 const PLACEHOLDER = '/__NUXT_DEVTOOLS_BASE__/'
 const RUNTIME_CONFIG_APP_RE = /(window\.__NUXT__\.config\s*=\s*\{[\s\S]*?\bapp:\{)([^}]*)(\})/
+const RUNTIME_CONFIG_EXISTING_BASE_URL_RE = /baseURL:"[^"]*",?/
 const RUNTIME_CONFIG_BASE_URL = 'location.pathname.replace(/[^/]*$/,"")'
 
 rmSync(TARGET, { recursive: true, force: true })
@@ -44,7 +45,8 @@ for (const file of htmlFiles) {
   // remaining (asset URL) placeholder occurrences.
   html = html.replace(RUNTIME_CONFIG_APP_RE, (_, prefix, existingProps, suffix) => {
     const baseUrlProp = `baseURL:${RUNTIME_CONFIG_BASE_URL}`
-    return `${prefix}${existingProps ? `${baseUrlProp},${existingProps}` : baseUrlProp}${suffix}`
+    const otherProps = existingProps.replace(RUNTIME_CONFIG_EXISTING_BASE_URL_RE, '')
+    return `${prefix}${otherProps ? `${baseUrlProp},${otherProps}` : baseUrlProp}${suffix}`
   })
   html = html.replaceAll(PLACEHOLDER, './')
   writeFileSync(path, html)

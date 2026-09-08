@@ -46,6 +46,7 @@
     "@vueuse/integrations": "catalog:frontend",
     "@vueuse/nuxt": "catalog:buildtools",
     "defu": "catalog:prod",
+    "dompurify": "catalog:frontend",
     "focus-trap": "catalog:frontend",
     "splitpanes": "catalog:frontend",
     "unocss": "catalog:buildtools",
